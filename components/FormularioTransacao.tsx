@@ -15,36 +15,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import api from '@/lib/api';
 import { toast } from 'sonner';
 import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
+import { useCategories } from '@/hooks/useCategories';
+import { useTransactions } from '@/hooks/useTransactions';
+import { TransactionFormData } from '@/types';
 
 const transactionSchema = z.object({
   type: z.enum(['entrada', 'saida']),
   value: z.number().min(0.01, 'Valor deve ser maior que zero'),
   date: z.string().min(1, 'Data é obrigatória'),
   description: z.string().min(1, 'Descrição é obrigatória'),
-  category: z.string().min(1, 'Categoria é obrigatória'),
+  categoryId: z.string().min(1, 'Categoria é obrigatória'),
 });
-
-type TransactionFormData = z.infer<typeof transactionSchema>;
-
-const categories = [
-  'Alimentação',
-  'Transporte',
-  'Saúde',
-  'Educação',
-  'Lazer',
-  'Moradia',
-  'Roupas',
-  'Serviços',
-  'Outros',
-];
 
 function FormularioTransacao() {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { categories, loading: categoriesLoading } = useCategories();
+  const { createTransaction } = useTransactions();
   const router = useRouter();
 
   const {
@@ -55,8 +45,7 @@ function FormularioTransacao() {
     watch,
     setValue,
   } = useForm<TransactionFormData>({
-    resolver: zodResolver(transactionSchema),
-    defaultValues: {
+    resolver: zodResolver(transactionSchema),    defaultValues: {
       type: 'entrada',
       date: new Date().toISOString().split('T')[0],
     },
@@ -67,13 +56,13 @@ function FormularioTransacao() {
   const onSubmit = async (data: TransactionFormData) => {
     setIsSubmitting(true);
     try {
-      await api.post('/transactions', data);
-      toast.success('Transação criada com sucesso!');
-      reset();
-      router.push('/dashboard');
+      const success = await createTransaction(data);
+      if (success) {
+        reset();
+        router.push('/dashboard');
+      }
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Erro ao criar transação';
-      toast.error(message);
+      console.error('Erro no formulário:', error);
     } finally {
       setIsSubmitting(false);
     }
@@ -164,8 +153,7 @@ function FormularioTransacao() {
             padding: '1.5rem'
           }}
         >
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            {/* Tipo de Transação */}
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">            {/* Tipo de Transação */}
             <div className="space-y-2">
               <Label>Tipo de Transação</Label>
               <Select
@@ -215,25 +203,34 @@ function FormularioTransacao() {
               {errors.date && (
                 <p className="text-sm text-red-600">{errors.date.message}</p>
               )}
-            </div>
-
-            {/* Categoria */}
+            </div>            {/* Categoria */}
             <div className="space-y-2">
               <Label>Categoria</Label>
-              <Select onValueChange={(value: string) => setValue('category', value)}>
+              <Select 
+                onValueChange={(value: string) => setValue('categoryId', value)}
+                disabled={categoriesLoading}
+              >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione uma categoria" />
+                  <SelectValue 
+                    placeholder={
+                      categoriesLoading 
+                        ? "Carregando categorias..." 
+                        : categories.length > 0 
+                          ? "Selecione uma categoria"
+                          : "Nenhuma categoria encontrada"
+                    } 
+                  />
                 </SelectTrigger>
                 <SelectContent>
-                  {categories.map((category) => (
-                    <SelectItem key={category} value={category}>
-                      {category}
+                  {categories.map((category: any) => (
+                    <SelectItem key={category.id} value={category.id.toString()}>
+                      {category.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              {errors.category && (
-                <p className="text-sm text-red-600">{errors.category.message}</p>
+              {errors.categoryId && (
+                <p className="text-sm text-red-600">{errors.categoryId.message}</p>
               )}
             </div>
 
@@ -260,8 +257,7 @@ function FormularioTransacao() {
                 className="flex-1"
               >
                 Cancelar
-              </Button>
-              <Button
+              </Button>              <Button
                 type="submit"
                 className={`flex-1 ${
                   transactionType === 'entrada'

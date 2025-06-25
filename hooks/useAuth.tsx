@@ -4,12 +4,13 @@ import { useState, createContext, useContext, useEffect } from 'react';
 import { User, LoginCredentials, AuthResponse } from '@/types';
 import api from '@/lib/api';
 import { toast } from 'sonner';
-import Cookies from 'js-cookie';
 
 interface AuthContextType {
   user: User | null;
   login: (credentials: LoginCredentials) => Promise<boolean>;
   logout: () => void;
+  clearAuth: () => void;
+  revalidateUser: () => Promise<void>;
   loading: boolean;
 }
 
@@ -17,62 +18,80 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(false);
-  // Verificar se há token ao carregar a página
+  const [loading, setLoading] = useState(true); // Começar com true para evitar flash
+  const [initialized, setInitialized] = useState(false);
+
+  // Verificar se há usuário autenticado ao carregar a página
   useEffect(() => {
-    const token = Cookies.get('token');
-    if (token && !user) {
-      // Buscar dados do usuário com base no token
-      fetchUserProfile();
+    if (!initialized) {
+      checkAuthStatus();
+      setInitialized(true);
     }
-  }, [user]);
+  }, [initialized]);
+  const checkAuthStatus = async () => {
+    // Só tentar buscar perfil se estivermos em uma rota que indica autenticação
+    const currentPath = window.location.pathname;
+    const isAuthenticatedRoute = ['/dashboard', '/categorias', '/nova-transacao', '/configuracoes'].some(
+      route => currentPath.startsWith(route)
+    );
+
+    if (isAuthenticatedRoute) {
+      await fetchUserProfile();
+    } else {
+      setLoading(false);
+    }
+  };
 
   const fetchUserProfile = async () => {
     try {
       const response = await api.get('/auth/profile');
       setUser(response.data);
-    } catch (error) {
-      console.error('Erro ao buscar perfil do usuário:', error);
-      // Se o token for inválido, remove dos cookies
-      Cookies.remove('token');
+    } catch (error: any) {
+      setUser(null);
+    } finally {
+      setLoading(false);
     }
-  };
-
-  const login = async (credentials: LoginCredentials): Promise<boolean> => {
+  };  const login = async (credentials: LoginCredentials): Promise<boolean> => {
     setLoading(true);
     try {
       const response = await api.post<AuthResponse>('/auth/login', credentials);
       
-      // O backend já salva o token nos cookies via Set-Cookie header
-      // Apenas definimos o usuário no estado
+      // Definir o usuário imediatamente com os dados da resposta
       setUser(response.data.user);
       toast.success('Login realizado com sucesso!');
+      
+      // Pequeno delay para garantir que o estado foi atualizado
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       return true;
     } catch (error: unknown) {
+      console.error('Erro no login:', error);
       const message = error instanceof Error ? error.message : 'Erro ao fazer login';
       toast.error(message);
       return false;
     } finally {
       setLoading(false);
     }
-  };
-  const logout = async () => {
+  };  const logout = async () => {
     setLoading(true);
     try {
       await api.post('/auth/logout');
-      // O backend deve limpar o cookie via Set-Cookie header
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
     } finally {
-      // Limpa o cookie localmente como fallback
-      Cookies.remove('token');
       setUser(null);
       setLoading(false);
-      window.location.href = '/login';
     }
   };
-  return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+  
+  const clearAuth = () => {
+    setUser(null);
+  };
+
+  const revalidateUser = async () => {
+    await fetchUserProfile();
+  };  return (
+    <AuthContext.Provider value={{ user, login, logout, clearAuth, revalidateUser, loading }}>
       {children}
     </AuthContext.Provider>
   );

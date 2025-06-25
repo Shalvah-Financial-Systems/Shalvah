@@ -5,7 +5,6 @@ import FormularioTransacao from '@/components/FormularioTransacao';
 import { motion } from 'framer-motion';
 
 export default function NovaTransacaoPage() {
-  // O middleware já protege a rota, não precisa verificar user
   return (
     <Sidebar>
       <motion.div

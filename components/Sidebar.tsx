@@ -16,7 +16,8 @@ import {
   LogOut, 
   User, 
   Menu,
-  X 
+  X,
+  Tag
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -47,7 +48,6 @@ export function Sidebar({ children }: SidebarProps) {
 
     fetchUser();
   }, []);
-
   const menuItems = [
     {
       href: '/dashboard',
@@ -60,6 +60,12 @@ export function Sidebar({ children }: SidebarProps) {
       icon: Plus,
       label: 'Nova Transação',
       active: pathname === '/nova-transacao',
+    },
+    {
+      href: '/categorias',
+      icon: Tag,
+      label: 'Categorias',
+      active: pathname === '/categorias',
     },
     {
       href: '/configuracoes',

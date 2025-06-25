@@ -2,10 +2,10 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 // Rotas que requerem autenticação
-const protectedRoutes = ['/dashboard', '/nova-transacao', '/configuracoes'];
+const protectedRoutes = ['/dashboard', '/nova-transacao', '/configuracoes', '/categorias'];
 
 // Rotas públicas (podem ser acessadas sem autenticação)
-const publicRoutes = ['/login', '/'];
+const publicRoutes = ['/login', '/', '/cadastro'];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -14,21 +14,24 @@ export function middleware(request: NextRequest) {
   const isProtectedRoute = protectedRoutes.some(route => 
     pathname.startsWith(route)
   );
+    // Verifica apenas os tokens que o backend realmente usa
+  const authCookieNames = ['access_token', 'refresh_token'];
+  let hasValidToken = false;
   
-  // Verifica se é uma rota pública
-  const isPublicRoute = publicRoutes.includes(pathname);
-    // Pega o token dos cookies (pode ser 'token', 'authToken', 'access_token', etc.)
-  const token = request.cookies.get('token')?.value || 
-                request.cookies.get('authToken')?.value ||
-                request.cookies.get('access_token')?.value;
-  
-  // Se for rota protegida e não tiver token, redireciona para login
-  if (isProtectedRoute && !token) {
-    return NextResponse.redirect(new URL('/login', request.url));
+  for (const cookieName of authCookieNames) {
+    const token = request.cookies.get(cookieName)?.value;
+    if (token && token.trim() !== '' && token !== 'undefined' && token !== 'null') {
+      hasValidToken = true;
+      break;
+    }
   }
   
-  // Se estiver logado e tentar acessar login, redireciona para dashboard
-  if (token && pathname === '/login') {
+  // Se for rota protegida e não tiver token, redireciona para login
+  if (isProtectedRoute && !hasValidToken) {
+    return NextResponse.redirect(new URL('/login', request.url));
+  }
+    // Se tiver token e tentar acessar login, redireciona para dashboard
+  if (hasValidToken && pathname === '/login') {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
   
