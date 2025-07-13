@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { CurrencyInput } from '@/components/ui/currency-input';
 import {
   Select,
   SelectContent,
@@ -19,13 +20,22 @@ import { Transaction, UpdateTransactionData } from '@/types';
 import { X, Edit, Save } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCategories } from '@/hooks/useCategories';
+import { useClients } from '@/hooks/useClients';
+import { useSuppliers } from '@/hooks/useSuppliers';
+import { useProductsServices } from '@/hooks/useProductsServices';
+import { toast } from 'sonner';
 
 const editTransactionSchema = z.object({
-  type: z.enum(['entrada', 'saida']).optional(),
+  type: z.enum(['INCOME', 'COST']).optional(),
+  classification: z.enum(['EXPENSE', 'COST']).optional(),
+  typeExpense: z.enum(['FIXED', 'VARIABLE']).optional(),
   value: z.number().min(0.01, 'Valor deve ser maior que zero').optional(),
   date: z.string().min(1, 'Data é obrigatória').optional(),
-  description: z.string().min(1, 'Descrição é obrigatória').optional(),
+  description: z.string().optional(),
   categoryId: z.string().min(1, 'Categoria é obrigatória').optional(),
+  productServiceId: z.string().optional(),
+  clientId: z.string().optional(),
+  supplierId: z.string().optional(),
 });
 
 interface EditTransactionModalProps {
@@ -44,6 +54,11 @@ export function EditTransactionModal({
   isUpdating
 }: EditTransactionModalProps) {
   const { categories, loading: categoriesLoading } = useCategories();
+  const { clients, loading: clientsLoading } = useClients();
+  const { suppliers, loading: suppliersLoading } = useSuppliers();
+  const { productsServices, loading: productsServicesLoading } = useProductsServices();
+  
+  const [isFormLoaded, setIsFormLoaded] = useState(false);
   
   const {
     register,
@@ -54,27 +69,89 @@ export function EditTransactionModal({
     setValue,
   } = useForm<UpdateTransactionData>({
     resolver: zodResolver(editTransactionSchema),
+    defaultValues: {
+      type: undefined,
+      classification: undefined,
+      typeExpense: undefined,
+      value: 0,
+      date: '',
+      description: '',
+      categoryId: '',
+      productServiceId: '',
+      clientId: '',
+      supplierId: '',
+    }
   });
 
   const transactionType = watch('type');
+  
+  // Valores específicos para os selects com fallback
+  const currentType = isFormLoaded ? (watch('type') || '') : '';
+  const currentClassification = isFormLoaded ? (watch('classification') || '') : '';
+  const currentTypeExpense = isFormLoaded ? (watch('typeExpense') || '') : '';
+  const currentCategoryId = isFormLoaded ? (watch('categoryId') || '') : '';
+  const currentClientId = isFormLoaded ? (watch('clientId') || '') : '';
+  const currentSupplierId = isFormLoaded ? (watch('supplierId') || '') : '';
+  const currentProductServiceId = isFormLoaded ? (watch('productServiceId') || '') : '';
 
   // Preencher formulário quando a transação mudar
   useEffect(() => {
     if (transaction && isOpen) {
-      // Formatar a data corretamente para o input date
-      const formattedDate = transaction.date.includes('T') 
-        ? transaction.date.split('T')[0] 
-        : transaction.date.split(' ')[0] || transaction.date;
+      setIsFormLoaded(false);
+      
+      // Pequeno delay para garantir que o modal esteja completamente renderizado
+      setTimeout(() => {
+        // Formatar a data corretamente para o input date
+        const formattedDate = transaction.date.includes('T') 
+          ? transaction.date.split('T')[0] 
+          : transaction.date.split(' ')[0] || transaction.date;
+          
+        const formData = {
+          type: transaction.type,
+          classification: transaction.classification,
+          typeExpense: transaction.typeExpense,
+          value: transaction.value,
+          date: formattedDate,
+          description: transaction.description,
+          categoryId: transaction.categoryId ? transaction.categoryId.toString() : '',
+          productServiceId: transaction.productServiceId ? transaction.productServiceId.toString() : '',
+          clientId: transaction.clientId ? transaction.clientId.toString() : '',
+          supplierId: transaction.supplierId ? transaction.supplierId.toString() : '',
+        };
         
+        // Reset com os dados formatados
+        reset(formData);
+        
+        // Garantir que os valores sejam definidos individualmente também
+        Object.entries(formData).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            setValue(key as keyof typeof formData, value);
+          }
+        });
+        
+        setIsFormLoaded(true);
+      }, 100);
+    }
+  }, [transaction, isOpen, reset, setValue]);
+
+  // Limpar formulário quando modal for fechado
+  useEffect(() => {
+    if (!isOpen) {
+      setIsFormLoaded(false);
       reset({
-        type: transaction.type,
-        value: transaction.value,
-        date: formattedDate,
-        description: transaction.description,
-        categoryId: transaction.categoryId,
+        type: undefined,
+        classification: undefined,
+        typeExpense: undefined,
+        value: undefined,
+        date: '',
+        description: '',
+        categoryId: '',
+        productServiceId: '',
+        clientId: '',
+        supplierId: '',
       });
     }
-  }, [transaction, isOpen, reset]);
+  }, [isOpen, reset]);
 
   const handleSave = async (data: UpdateTransactionData) => {
     const success = await onSave(data);
@@ -137,15 +214,15 @@ export function EditTransactionModal({
                   <div className="space-y-2">
                     <Label>Tipo de Transação</Label>
                     <Select
-                      onValueChange={(value: string) => setValue('type', value as 'entrada' | 'saida')}
-                      value={transactionType}
+                      onValueChange={(value: string) => setValue('type', value as 'INCOME' | 'COST')}
+                      value={currentType}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione o tipo" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="entrada">Receita</SelectItem>
-                        <SelectItem value="saida">Despesa</SelectItem>
+                        <SelectItem value="INCOME">Receita</SelectItem>
+                        <SelectItem value="COST">Custo/Despesa</SelectItem>
                       </SelectContent>
                     </Select>
                     {errors.type && (
@@ -153,20 +230,58 @@ export function EditTransactionModal({
                     )}
                   </div>
 
+                  {/* Classificação (apenas para COST) */}
+                  {transactionType === 'COST' && (
+                    <div className="space-y-2">
+                      <Label>Classificação</Label>
+                      <Select
+                        onValueChange={(value: string) => setValue('classification', value as 'EXPENSE' | 'COST')}
+                        value={currentClassification}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione a classificação" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="EXPENSE">Despesa</SelectItem>
+                          <SelectItem value="COST">Custo</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {errors.classification && (
+                        <p className="text-sm text-red-600">{errors.classification.message}</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Tipo de Despesa (apenas para COST) */}
+                  {transactionType === 'COST' && (
+                    <div className="space-y-2">
+                      <Label>Tipo de Despesa</Label>
+                      <Select
+                        onValueChange={(value: string) => setValue('typeExpense', value as 'FIXED' | 'VARIABLE')}
+                        value={currentTypeExpense}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o tipo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="FIXED">Fixa</SelectItem>
+                          <SelectItem value="VARIABLE">Variável</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {errors.typeExpense && (
+                        <p className="text-sm text-red-600">{errors.typeExpense.message}</p>
+                      )}
+                    </div>
+                  )}
+
                   {/* Valor */}
                   <div className="space-y-2">
                     <Label htmlFor="value">Valor</Label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-2.5 text-gray-500">R$</span>
-                      <Input
-                        id="value"
-                        type="number"
-                        step="0.01"
-                        placeholder="0,00"
-                        className="pl-10"
-                        {...register('value', { valueAsNumber: true })}
-                      />
-                    </div>
+                    <CurrencyInput
+                      value={watch('value') || 0}
+                      onChange={(value) => setValue('value', value)}
+                      showCurrencySymbol={true}
+                    />
                     {errors.value && (
                       <p className="text-sm text-red-600">{errors.value.message}</p>
                     )}
@@ -190,7 +305,7 @@ export function EditTransactionModal({
                     <Label>Categoria</Label>
                     <Select 
                       onValueChange={(value: string) => setValue('categoryId', value)}
-                      value={watch('categoryId')}
+                      value={currentCategoryId}
                       disabled={categoriesLoading}
                     >
                       <SelectTrigger>
@@ -216,6 +331,105 @@ export function EditTransactionModal({
                       <p className="text-sm text-red-600">{errors.categoryId.message}</p>
                     )}
                   </div>
+
+                  {/* Cliente (apenas para receitas) */}
+                  {transactionType === 'INCOME' && (
+                    <div className="space-y-2">
+                      <Label>Cliente (opcional)</Label>
+                      <Select 
+                        onValueChange={(value: string) => setValue('clientId', value === 'none' ? '' : value)}
+                        value={watch('clientId') || 'none'}
+                        disabled={clientsLoading}
+                      >
+                        <SelectTrigger>
+                          <SelectValue 
+                            placeholder={
+                              clientsLoading 
+                                ? "Carregando clientes..." 
+                                : "Selecione um cliente (opcional)"
+                            } 
+                          />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Nenhum cliente</SelectItem>
+                          {clients.map((client) => (
+                            <SelectItem key={client.id} value={client.id}>
+                              {client.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {errors.clientId && (
+                        <p className="text-sm text-red-600">{errors.clientId.message}</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Fornecedor (apenas para custos/despesas) */}
+                  {transactionType === 'COST' && (
+                    <div className="space-y-2">
+                      <Label>Fornecedor (opcional)</Label>
+                      <Select 
+                        onValueChange={(value: string) => setValue('supplierId', value === 'none' ? '' : value)}
+                        value={watch('supplierId') || 'none'}
+                        disabled={suppliersLoading}
+                      >
+                        <SelectTrigger>
+                          <SelectValue 
+                            placeholder={
+                              suppliersLoading 
+                                ? "Carregando fornecedores..." 
+                                : "Selecione um fornecedor (opcional)"
+                            } 
+                          />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Nenhum fornecedor</SelectItem>
+                          {suppliers.map((supplier) => (
+                            <SelectItem key={supplier.id} value={supplier.id}>
+                              {supplier.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {errors.supplierId && (
+                        <p className="text-sm text-red-600">{errors.supplierId.message}</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Produto/Serviço (apenas para receitas) */}
+                  {transactionType === 'INCOME' && (
+                    <div className="space-y-2">
+                      <Label>Produto/Serviço (opcional)</Label>
+                      <Select 
+                        onValueChange={(value: string) => setValue('productServiceId', value === 'none' ? '' : value)}
+                        value={watch('productServiceId') || 'none'}
+                        disabled={productsServicesLoading}
+                      >
+                        <SelectTrigger>
+                          <SelectValue 
+                            placeholder={
+                              productsServicesLoading 
+                                ? "Carregando produtos/serviços..." 
+                                : "Selecione um produto/serviço (opcional)"
+                            } 
+                          />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Nenhum produto/serviço</SelectItem>
+                          {productsServices.map((item) => (
+                            <SelectItem key={item.id} value={item.id}>
+                              {item.name} - R$ {item.price.toFixed(2)} ({item.type === 'PRODUCT' ? 'Produto' : 'Serviço'})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {errors.productServiceId && (
+                        <p className="text-sm text-red-600">{errors.productServiceId.message}</p>
+                      )}
+                    </div>
+                  )}
 
                   {/* Descrição */}
                   <div className="space-y-2">
@@ -246,7 +460,7 @@ export function EditTransactionModal({
                     <Button
                       type="submit"
                       className={`flex-1 ${
-                        transactionType === 'entrada'
+                        transactionType === 'INCOME'
                           ? 'bg-green-600 hover:bg-green-700'
                           : 'bg-red-600 hover:bg-red-700'
                       }`}

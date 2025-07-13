@@ -3,12 +3,13 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Transaction, UpdateTransactionData } from '@/types';
-import { Trash2, Edit, ArrowUpRight, ArrowDownRight, Plus } from 'lucide-react';
+import { RotateCcw, Edit, ArrowUpRight, ArrowDownRight, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTransactions } from '@/hooks/useTransactions';
-import { DeleteTransactionModal } from '@/components/DeleteTransactionModal';
 import { EditTransactionModal } from '@/components/EditTransactionModal';
+import { useAlertModal } from '@/hooks/useAlertModal';
 import Link from 'next/link';
 
 interface ListaTransacoesProps {
@@ -22,13 +23,13 @@ export function ListaTransacoes({
   showActions = true,
   showNewTransactionButton = false 
 }: ListaTransacoesProps) {
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   
-  const { transactions: hookTransactions, deleteTransaction, updateTransaction, loading } = useTransactions();
+  const { transactions: hookTransactions, toggleTransactionStatus, updateTransaction, loading } = useTransactions();
+  const { showToggleAlert } = useAlertModal();
   
   // Use external transactions if provided, otherwise use hook transactions
   const transactions = externalTransactions || hookTransactions;
@@ -43,26 +44,28 @@ export function ListaTransacoes({
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('pt-BR');
   };
-  const handleDelete = async (transaction: Transaction) => {
-    setSelectedTransaction(transaction);
-    setDeleteModalOpen(true);
-  };
 
-  const handleConfirmDelete = async () => {
-    if (!selectedTransaction) return;
+  const handleToggleStatus = async (transaction: Transaction) => {
+    const isActive = transaction.status === 'ACTIVE';
+    const action = isActive ? 'cancelar' : 'ativar';
     
-    setDeletingId(selectedTransaction.id);
-    try {
-      const success = await deleteTransaction(selectedTransaction.id);
-      if (success) {
-        setDeleteModalOpen(false);
-        setSelectedTransaction(null);
+    await showToggleAlert(
+      `${action} transação`,
+      `Tem certeza que deseja ${action} esta transação?`,
+      async () => {
+        setTogglingId(transaction.id);
+        try {
+          const success = await toggleTransactionStatus(transaction.id);
+          if (!success) {
+            // Error handling is done in the hook
+          }
+        } catch (error) {
+          console.error('Erro ao alterar status da transação:', error);
+        } finally {
+          setTogglingId(null);
+        }
       }
-    } catch (error) {
-      console.error('Erro ao deletar transação:', error);
-    } finally {
-      setDeletingId(null);
-    }
+    );
   };
 
   const handleEdit = (transaction: Transaction) => {
@@ -90,7 +93,6 @@ export function ListaTransacoes({
   };
 
   const handleCloseModals = () => {
-    setDeleteModalOpen(false);
     setEditModalOpen(false);
     setSelectedTransaction(null);
   };
@@ -123,11 +125,11 @@ export function ListaTransacoes({
                 className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
               >                <div className="flex items-center space-x-4">
                   <div className={`p-2 rounded-full ${
-                    transaction.type === 'entrada' 
+                    transaction.type === 'INCOME' 
                       ? 'bg-green-100 text-green-600' 
                       : 'bg-red-100 text-red-600'
                   }`}>
-                    {transaction.type === 'entrada' ? (
+                    {transaction.type === 'INCOME' ? (
                       <ArrowUpRight className="h-4 w-4" />
                     ) : (
                       <ArrowDownRight className="h-4 w-4" />
@@ -136,17 +138,20 @@ export function ListaTransacoes({
                   
                   <div>
                     <div className="font-medium">{transaction.description}</div>
-                    <div className="text-sm text-gray-500">
-                      {transaction.category?.name || 'Categoria não encontrada'} • {formatDate(transaction.date)}
+                    <div className="text-sm text-gray-500 flex items-center gap-2">
+                      <span>{transaction.category?.name || 'Categoria não encontrada'} • {formatDate(transaction.date)}</span>
+                      <Badge variant={transaction.active !== false ? 'default' : 'destructive'}>
+                        {transaction.active !== false ? 'Ativa' : 'Cancelada'}
+                      </Badge>
                     </div>
                   </div>
                 </div>                <div className="flex items-center space-x-4">
                   <div className={`text-lg font-semibold ${
-                    transaction.type === 'entrada' 
+                    transaction.type === 'INCOME' 
                       ? 'text-green-600' 
                       : 'text-red-600'
                   }`}>
-                    {transaction.type === 'entrada' ? '+' : '-'}{formatCurrency(transaction.value)}
+                    {transaction.type === 'INCOME' ? '+' : '-'}{formatCurrency(transaction.value)}
                   </div>
                   
                   {showActions && (
@@ -162,11 +167,12 @@ export function ListaTransacoes({
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-red-600 hover:text-red-700"
-                        onClick={() => handleDelete(transaction)}
-                        disabled={deletingId === transaction.id}
+                        className={`h-8 w-8 ${transaction.active !== false ? 'text-orange-600 hover:text-orange-700' : 'text-green-600 hover:text-green-700'}`}
+                        onClick={() => handleToggleStatus(transaction)}
+                        disabled={togglingId === transaction.id}
+                        title={transaction.active !== false ? 'Cancelar transação' : 'Ativar transação'}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <RotateCcw className="h-4 w-4" />
                       </Button>
                     </div>
                   )}
@@ -178,14 +184,6 @@ export function ListaTransacoes({
       </CardContent>
       
       {/* Modais */}
-      <DeleteTransactionModal
-        isOpen={deleteModalOpen}
-        onClose={handleCloseModals}
-        onConfirm={handleConfirmDelete}
-        transaction={selectedTransaction}
-        isDeleting={!!deletingId}
-      />
-      
       <EditTransactionModal
         isOpen={editModalOpen}
         onClose={handleCloseModals}

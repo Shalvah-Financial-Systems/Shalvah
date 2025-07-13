@@ -11,7 +11,7 @@ interface UseTransactionsReturn {
   error: string | null;
   createTransaction: (data: CreateTransactionData) => Promise<boolean>;
   updateTransaction: (id: string, data: UpdateTransactionData) => Promise<boolean>;
-  deleteTransaction: (id: string) => Promise<boolean>;
+  toggleTransactionStatus: (id: string) => Promise<boolean>;
   getTransaction: (id: string) => Promise<Transaction | null>;
   refreshTransactions: () => Promise<void>;
 }
@@ -25,7 +25,7 @@ export function useTransactions(): UseTransactionsReturn {  const [transactions,
     try {
       setLoading(true);
       setError(null);
-      const response = await api.get('/transactions');
+      const response = await api.get('/transactions?include=category,productService,client,supplier');
       // Garantir que sempre seja um array
       const transactionsData = response.data.data ?? [];
       setTransactions(transactionsData);
@@ -112,24 +112,24 @@ export function useTransactions(): UseTransactionsReturn {  const [transactions,
     }
   };
 
-  // Deletar transação
-  const deleteTransaction = async (id: string): Promise<boolean> => {
+  // Cancelar/Ativar transação
+  const toggleTransactionStatus = async (id: string): Promise<boolean> => {
     try {
-      await api.delete(`/transactions/${id}`);
+      await api.patch(`/transactions/${id}/toggle-status`);
       
-      // Remover a transação do estado local
-      setTransactions(prev => prev.filter(transaction => transaction.id !== id));
+      // Recarregar transações para obter o status atualizado
+      await loadTransactions();
       
-      toast.success('Transação excluída com sucesso!');
+      toast.success('Status da transação atualizado com sucesso!');
       return true;
     } catch (err: any) {
-      console.error('Erro ao deletar transação:', err);
-      const message = err.response?.data?.message || 'Erro ao excluir transação';
+      console.error('Erro ao atualizar status da transação:', err);
+      const message = err.response?.data?.message || 'Erro ao atualizar status da transação';
       
       if (err.response?.status === 401) {
         console.log('Token inválido - usuário será redirecionado pelo interceptador');
       } else if (err.response?.status === 403) {
-        toast.error('Você não tem permissão para excluir esta transação');
+        toast.error('Você não tem permissão para alterar esta transação');
       } else if (err.response?.status === 404) {
         toast.error('Transação não encontrada');
       } else {
@@ -142,7 +142,7 @@ export function useTransactions(): UseTransactionsReturn {  const [transactions,
   // Buscar transação específica
   const getTransaction = async (id: string): Promise<Transaction | null> => {
     try {
-      const response = await api.get(`/transactions/${id}`);
+      const response = await api.get(`/transactions/${id}?include=category,productService,client,supplier`);
       return response.data;
     } catch (err: any) {
       console.error('Erro ao buscar transação:', err);
@@ -177,7 +177,7 @@ export function useTransactions(): UseTransactionsReturn {  const [transactions,
     error,
     createTransaction,
     updateTransaction,
-    deleteTransaction,
+    toggleTransactionStatus,
     getTransaction,
     refreshTransactions,
   };

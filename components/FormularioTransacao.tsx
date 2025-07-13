@@ -15,25 +15,37 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { toast } from 'sonner';
+import { CurrencyInput } from '@/components/ui/currency-input';
 import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useCategories } from '@/hooks/useCategories';
 import { useTransactions } from '@/hooks/useTransactions';
+import { useClients } from '@/hooks/useClients';
+import { useSuppliers } from '@/hooks/useSuppliers';
+import { useProductsServices } from '@/hooks/useProductsServices';
 import { TransactionFormData } from '@/types';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 
 const transactionSchema = z.object({
-  type: z.enum(['entrada', 'saida']),
+  type: z.enum(['INCOME', 'COST']),
+  classification: z.enum(['EXPENSE', 'COST']).optional(),
+  typeExpense: z.enum(['FIXED', 'VARIABLE']).optional(),
   value: z.number().min(0.01, 'Valor deve ser maior que zero'),
   date: z.string().min(1, 'Data é obrigatória'),
-  description: z.string().min(1, 'Descrição é obrigatória'),
+  description: z.string().optional(),
   categoryId: z.string().min(1, 'Categoria é obrigatória'),
+  productServiceId: z.string().optional(),
+  clientId: z.string().optional(),
+  supplierId: z.string().optional(),
 });
 
 function FormularioTransacao() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { categories, loading: categoriesLoading } = useCategories();
+  const { clients, loading: clientsLoading } = useClients();
+  const { suppliers, loading: suppliersLoading } = useSuppliers();
+  const { productsServices, loading: productsServicesLoading } = useProductsServices();
   const { createTransaction } = useTransactions();
   const router = useRouter();
 
@@ -45,8 +57,9 @@ function FormularioTransacao() {
     watch,
     setValue,
   } = useForm<TransactionFormData>({
-    resolver: zodResolver(transactionSchema),    defaultValues: {
-      type: 'entrada',
+    resolver: zodResolver(transactionSchema),
+    defaultValues: {
+      type: 'INCOME',
       date: new Date().toISOString().split('T')[0],
     },
   });
@@ -67,211 +80,307 @@ function FormularioTransacao() {
       setIsSubmitting(false);
     }
   };
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      className="max-w-2xl mx-auto"
-      style={{
-        maxWidth: '42rem',
-        margin: '0 auto'
-      }}
-    >
-      <div 
-        className="mb-6"
-        style={{
-          marginBottom: '1.5rem'
-        }}
-      >
-        <Button
-          variant="ghost"
-          onClick={() => router.back()}
-          className="mb-4"
-          style={{
-            marginBottom: '1rem',
-            display: 'flex',
-            alignItems: 'center',
-            padding: '0.5rem 1rem',
-            backgroundColor: 'transparent',
-            border: 'none',
-            cursor: 'pointer',
-            color: '#6b7280'
-          }}
+    <div className="h-full bg-gray-50 overflow-y-auto">
+      <div className="py-6">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="w-full max-w-full px-6"
         >
-          <ArrowLeft className="mr-2 h-4 w-4" style={{ marginRight: '0.5rem', width: '1rem', height: '1rem' }} />
-          Voltar
-        </Button>
-        
-        <h1 
-          className="text-3xl font-bold text-gray-900"
-          style={{
-            fontSize: '1.875rem',
-            fontWeight: 'bold',
-            color: '#111827',
-            marginBottom: '0.25rem'
-          }}
-        >
-          Nova Transação
-        </h1>
-        <p 
-          className="text-gray-600 mt-1"
-          style={{
-            color: '#6b7280',
-            marginTop: '0.25rem'
-          }}
-        >
-          Adicione uma nova receita ou despesa
-        </p>
+          <div className="mb-6">
+            <Button
+              variant="ghost"
+              onClick={() => router.back()}
+              className="mb-4 flex items-center text-gray-600 hover:text-gray-800"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Voltar
+            </Button>
+            
+            <h1 className="text-3xl font-bold text-gray-900 mb-1">
+              Nova Transação
+            </h1>
+            <p className="text-gray-600 mt-1">
+              Adicione uma nova receita ou despesa
+            </p>
+          </div>
+
+          <Card className="bg-white rounded-lg shadow-lg border border-gray-200">
+            <CardHeader className="p-6 border-b border-gray-200">
+              <CardTitle className="text-xl font-semibold text-gray-900">
+                Detalhes da Transação
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                {/* Grid responsivo para campos principais */}
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
+                  {/* Tipo de Transação */}
+                  <div className="space-y-2">
+                    <Label>Tipo de Transação</Label>
+                    <Select
+                      onValueChange={(value: string) => setValue('type', value as 'INCOME' | 'COST')}
+                      defaultValue="INCOME"
+                    >
+                      <SelectTrigger className="h-11 w-full">
+                        <SelectValue placeholder="Selecione o tipo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="INCOME">Receita</SelectItem>
+                        <SelectItem value="COST">Custo/Despesa</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {errors.type && (
+                      <p className="text-sm text-red-600">{errors.type.message}</p>
+                    )}
+                  </div>
+
+                  {/* Valor */}
+                  <div className="space-y-2">
+                    <Label htmlFor="value">Valor</Label>
+                    <CurrencyInput
+                      value={watch('value') || 0}
+                      onChange={(value) => setValue('value', value)}
+                      className="h-11 w-full"
+                      showCurrencySymbol={true}
+                    />
+                    {errors.value && (
+                      <p className="text-sm text-red-600">{errors.value.message}</p>
+                    )}
+                  </div>
+
+                  {/* Data */}
+                  <div className="space-y-2 md:col-span-2 xl:col-span-1">
+                    <Label htmlFor="date">Data</Label>
+                    <div className="relative">
+                      <Input
+                        id="date"
+                        type="date"
+                        className="h-11 w-full pr-12 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-3 [&::-webkit-calendar-picker-indicator]:top-1/2 [&::-webkit-calendar-picker-indicator]:transform [&::-webkit-calendar-picker-indicator]:-translate-y-1/2 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:w-5 [&::-webkit-calendar-picker-indicator]:h-5"
+                        {...register('date')}
+                      />
+                    </div>
+                    {errors.date && (
+                      <p className="text-sm text-red-600">{errors.date.message}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Campos condicionais para COST */}
+                {transactionType === 'COST' && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                    {/* Classificação (apenas para COST) */}
+                    <div className="space-y-2">
+                      <Label>Classificação</Label>
+                      <Select
+                        onValueChange={(value: string) => setValue('classification', value as 'EXPENSE' | 'COST')}
+                        value={watch('classification')}
+                      >
+                        <SelectTrigger className="h-11 w-full">
+                          <SelectValue placeholder="Selecione a classificação" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="EXPENSE">Despesa</SelectItem>
+                          <SelectItem value="COST">Custo</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {errors.classification && (
+                        <p className="text-sm text-red-600">{errors.classification.message}</p>
+                      )}
+                    </div>
+
+                    {/* Tipo de Despesa (apenas para COST) */}
+                    <div className="space-y-2">
+                      <Label>Tipo de Despesa</Label>
+                      <Select
+                        onValueChange={(value: string) => setValue('typeExpense', value as 'FIXED' | 'VARIABLE')}
+                        value={watch('typeExpense')}
+                      >
+                        <SelectTrigger className="h-11 w-full">
+                          <SelectValue placeholder="Selecione o tipo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="FIXED">Fixa</SelectItem>
+                          <SelectItem value="VARIABLE">Variável</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {errors.typeExpense && (
+                        <p className="text-sm text-red-600">{errors.typeExpense.message}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Segunda linha de campos */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                  {/* Categoria */}
+                  <div className="space-y-2">
+                    <Label>Categoria</Label>
+                    <SearchableSelect
+                      options={categories.map((category: any) => ({
+                        value: category.id.toString(),
+                        label: category.name
+                      }))}
+                      value={watch('categoryId') || ''}
+                      onValueChange={(value) => setValue('categoryId', value)}
+                      placeholder={
+                        categoriesLoading 
+                          ? "Carregando categorias..." 
+                          : categories.length > 0 
+                            ? "Selecione uma categoria"
+                            : "Nenhuma categoria encontrada"
+                      }
+                      searchPlaceholder="Buscar categoria..."
+                      emptyText="Nenhuma categoria encontrada"
+                      disabled={categoriesLoading}
+                      className="w-full"
+                    />
+                    {errors.categoryId && (
+                      <p className="text-sm text-red-600">{errors.categoryId.message}</p>
+                    )}
+                  </div>
+
+                  {/* Descrição */}
+                  <div className="space-y-2">
+                    <Label htmlFor="description">Descrição</Label>
+                    <textarea
+                      id="description"
+                      placeholder="Descreva a transação"
+                      className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+                      rows={3}
+                      {...register('description')}
+                    />
+                    {errors.description && (
+                      <p className="text-sm text-red-600">{errors.description.message}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Cliente (apenas para receitas) */}
+                {transactionType === 'INCOME' && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                    <div className="space-y-2">
+                      <Label>Cliente (opcional)</Label>
+                      <SearchableSelect
+                        options={[
+                          { value: 'none', label: 'Nenhum cliente' },
+                          ...clients.map((client) => ({
+                            value: client.id,
+                            label: client.name
+                          }))
+                        ]}
+                        value={watch('clientId') || 'none'}
+                        onValueChange={(value) => setValue('clientId', value === 'none' ? '' : value)}
+                        placeholder={
+                          clientsLoading 
+                            ? "Carregando clientes..." 
+                            : "Selecione um cliente (opcional)"
+                        }
+                        searchPlaceholder="Buscar cliente..."
+                        emptyText="Nenhum cliente encontrado"
+                        disabled={clientsLoading}
+                        className="w-full"
+                      />
+                      {errors.clientId && (
+                        <p className="text-sm text-red-600">{errors.clientId.message}</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Produto/Serviço (opcional)</Label>
+                      <SearchableSelect
+                        options={[
+                          { value: 'none', label: 'Nenhum produto/serviço' },
+                          ...productsServices.map((item) => ({
+                            value: item.id,
+                            label: `${item.name} - R$ ${item.price.toFixed(2)} (${item.type === 'PRODUCT' ? 'Produto' : 'Serviço'})`
+                          }))
+                        ]}
+                        value={watch('productServiceId') || 'none'}
+                        onValueChange={(value) => setValue('productServiceId', value === 'none' ? '' : value)}
+                        placeholder={
+                          productsServicesLoading 
+                            ? "Carregando produtos/serviços..." 
+                            : "Selecione um produto/serviço (opcional)"
+                        }
+                        searchPlaceholder="Buscar produto/serviço..."
+                        emptyText="Nenhum produto/serviço encontrado"
+                        disabled={productsServicesLoading}
+                        className="w-full"
+                      />
+                      {errors.productServiceId && (
+                        <p className="text-sm text-red-600">{errors.productServiceId.message}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Fornecedor (apenas para custos/despesas) */}
+                {transactionType === 'COST' && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                    <div className="space-y-2">
+                      <Label>Fornecedor (opcional)</Label>
+                      <SearchableSelect
+                        options={[
+                          { value: 'none', label: 'Nenhum fornecedor' },
+                          ...suppliers.map((supplier) => ({
+                            value: supplier.id,
+                            label: supplier.name
+                          }))
+                        ]}
+                        value={watch('supplierId') || 'none'}
+                        onValueChange={(value) => setValue('supplierId', value === 'none' ? '' : value)}
+                        placeholder={
+                          suppliersLoading 
+                            ? "Carregando fornecedores..." 
+                            : "Selecione um fornecedor (opcional)"
+                        }
+                        searchPlaceholder="Buscar fornecedor..."
+                        emptyText="Nenhum fornecedor encontrado"
+                        disabled={suppliersLoading}
+                        className="w-full"
+                      />
+                      {errors.supplierId && (
+                        <p className="text-sm text-red-600">{errors.supplierId.message}</p>
+                      )}
+                    </div>
+                    
+                    {/* Campo vazio para balancear o grid */}
+                    <div></div>
+                  </div>
+                )}
+
+                {/* Botões */}
+                <div className="flex flex-col sm:flex-row gap-4 pt-6">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => router.back()}
+                    className="flex-1 h-11 w-full"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="submit"
+                    className={`flex-1 h-11 w-full ${
+                      transactionType === 'INCOME'
+                        ? 'bg-green-600 hover:bg-green-700'
+                        : 'bg-red-600 hover:bg-red-700'
+                    }`}
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? 'Salvando...' : 'Salvar Transação'}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
-
-      <Card
-        style={{
-          backgroundColor: 'white',
-          borderRadius: '0.5rem',
-          boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)',
-          border: '1px solid #e5e7eb'
-        }}
-      >        <CardHeader
-          style={{
-            padding: '1.5rem',
-            borderBottom: '1px solid #e5e7eb'
-          }}
-        >
-          <CardTitle
-            style={{
-              fontSize: '1.25rem',
-              fontWeight: '600',
-              color: '#111827'
-            }}
-          >
-            Detalhes da Transação
-          </CardTitle>
-        </CardHeader>
-        <CardContent
-          style={{
-            padding: '1.5rem'
-          }}
-        >
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">            {/* Tipo de Transação */}
-            <div className="space-y-2">
-              <Label>Tipo de Transação</Label>
-              <Select
-                onValueChange={(value: string) => setValue('type', value as 'entrada' | 'saida')}
-                defaultValue="entrada"
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="entrada">Receita</SelectItem>
-                  <SelectItem value="saida">Despesa</SelectItem>
-                </SelectContent>
-              </Select>
-              {errors.type && (
-                <p className="text-sm text-red-600">{errors.type.message}</p>
-              )}
-            </div>
-
-            {/* Valor */}
-            <div className="space-y-2">
-              <Label htmlFor="value">Valor</Label>
-              <div className="relative">
-                <span className="absolute left-3 top-2.5 text-gray-500">R$</span>
-                <Input
-                  id="value"
-                  type="number"
-                  step="0.01"
-                  placeholder="0,00"
-                  className="pl-10"
-                  {...register('value', { valueAsNumber: true })}
-                />
-              </div>
-              {errors.value && (
-                <p className="text-sm text-red-600">{errors.value.message}</p>
-              )}
-            </div>
-
-            {/* Data */}
-            <div className="space-y-2">
-              <Label htmlFor="date">Data</Label>
-              <Input
-                id="date"
-                type="date"
-                {...register('date')}
-              />
-              {errors.date && (
-                <p className="text-sm text-red-600">{errors.date.message}</p>
-              )}
-            </div>            {/* Categoria */}
-            <div className="space-y-2">
-              <Label>Categoria</Label>
-              <Select 
-                onValueChange={(value: string) => setValue('categoryId', value)}
-                disabled={categoriesLoading}
-              >
-                <SelectTrigger>
-                  <SelectValue 
-                    placeholder={
-                      categoriesLoading 
-                        ? "Carregando categorias..." 
-                        : categories.length > 0 
-                          ? "Selecione uma categoria"
-                          : "Nenhuma categoria encontrada"
-                    } 
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((category: any) => (
-                    <SelectItem key={category.id} value={category.id.toString()}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.categoryId && (
-                <p className="text-sm text-red-600">{errors.categoryId.message}</p>
-              )}
-            </div>
-
-            {/* Descrição */}
-            <div className="space-y-2">
-              <Label htmlFor="description">Descrição</Label>
-              <Input
-                id="description"
-                type="text"
-                placeholder="Descreva a transação"
-                {...register('description')}
-              />
-              {errors.description && (
-                <p className="text-sm text-red-600">{errors.description.message}</p>
-              )}
-            </div>
-
-            {/* Botões */}
-            <div className="flex gap-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => router.back()}
-                className="flex-1"
-              >
-                Cancelar
-              </Button>              <Button
-                type="submit"
-                className={`flex-1 ${
-                  transactionType === 'entrada'
-                    ? 'bg-green-600 hover:bg-green-700'
-                    : 'bg-red-600 hover:bg-red-700'
-                }`}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? 'Salvando...' : 'Salvar Transação'}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>    </motion.div>
+    </div>
   );
 }
 

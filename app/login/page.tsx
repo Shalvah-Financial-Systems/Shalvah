@@ -110,7 +110,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [identifierValue, setIdentifierValue] = useState('');
   const [inputType, setInputType] = useState<'email' | 'cnpj'>('email');
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const router = useRouter();
 
   const {
@@ -155,11 +155,16 @@ export default function LoginPage() {
       identifier: identifierValue
     };
     
-    const success = await login(submitData);
-    if (success) {
-      // Pequeno delay para garantir que o cookie seja definido
+    const result = await login(submitData);
+    if (result.success && result.user) {
+      // Pequeno delay para garantir que o estado do usuário seja atualizado
       setTimeout(() => {
-        router.push('/dashboard');
+        // Redirecionar baseado no tipo de usuário
+        if (result.user?.type === 'ADMIN') {
+          router.push('/admin/dashboard');
+        } else {
+          router.push('/dashboard');
+        }
       }, 100);
     }
     setIsLoading(false);
@@ -286,12 +291,12 @@ export default function LoginPage() {
             </form>
 
             <div className="mt-6 text-center">
-              <a
-                href="#"
+              <Link 
+                href="/forgot-password"
                 className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
               >
                 Esqueceu sua senha?
-              </a>
+              </Link>
             </div>            <div className="mt-4 text-center">
               <p className="text-sm text-gray-600">
                 Não tem uma conta?

@@ -75,6 +75,17 @@ export function useAlertModal() {
     });
   };
 
+  const showToggleAlert = (itemName: string, action: string, onConfirm: () => void | Promise<void>) => {
+    showAlert({
+      title: `Confirmar ${action === 'inativar' ? 'Inativação' : 'Ativação'}`,
+      description: `Tem certeza que deseja ${action} "${itemName}"?`,
+      type: action === 'inativar' ? 'warning' : 'info',
+      confirmText: action === 'inativar' ? 'Inativar' : 'Ativar',
+      cancelText: 'Cancelar',
+      onConfirm,
+    });
+  };
+
   return {
     isOpen,
     config,
@@ -83,6 +94,7 @@ export function useAlertModal() {
     showDeleteAlert,
     showEditAlert,
     showWarningAlert,
+    showToggleAlert,
     closeAlert,
     confirmAlert,
   };

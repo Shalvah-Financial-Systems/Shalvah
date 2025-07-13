@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { Category, CategoryFormData } from '@/types';
@@ -7,7 +7,9 @@ export function useCategories() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const loadCategories = async () => {
+  const [isInitialized, setIsInitialized] = useState(false);
+  
+  const loadCategories = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -20,8 +22,9 @@ export function useCategories() {
       console.error('Erro ao carregar categorias:', error);
     } finally {
       setLoading(false);
+      setIsInitialized(true);
     }
-  };
+  }, []);
 
   const createCategory = async (categoryData: CategoryFormData): Promise<boolean> => {
     try {
@@ -49,14 +52,14 @@ export function useCategories() {
     }
   };
 
-  const deleteCategory = async (id: string): Promise<boolean> => {
+  const toggleCategoryStatus = async (id: string): Promise<boolean> => {
     try {
-      await api.delete(`/categories/${id}`);
-      toast.success('Categoria excluída com sucesso!');
+      await api.patch(`/categories/${id}/toggle-status`);
+      toast.success('Status da categoria atualizado com sucesso!');
       await loadCategories();
       return true;
     } catch (error: any) {
-      const message = error.response?.data?.message || 'Erro ao excluir categoria';
+      const message = error.response?.data?.message || 'Erro ao atualizar status da categoria';
       toast.error(message);
       return false;
     }
@@ -68,8 +71,10 @@ export function useCategories() {
 
   // Carregar categorias na inicialização
   useEffect(() => {
-    loadCategories();
-  }, []);
+    if (!isInitialized) {
+      loadCategories();
+    }
+  }, [loadCategories, isInitialized]);
 
   return {
     categories,
@@ -78,7 +83,7 @@ export function useCategories() {
     loadCategories,
     createCategory,
     updateCategory,
-    deleteCategory,
+    toggleCategoryStatus,
     getCategoryById,
   };
 }

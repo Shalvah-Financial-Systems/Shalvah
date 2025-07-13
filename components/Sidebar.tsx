@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useAdminProtection } from '@/hooks/useAdminProtection';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -17,7 +18,15 @@ import {
   User, 
   Menu,
   X,
-  Tag
+  Tag,
+  Users,
+  Truck,
+  Package,
+  ChevronDown,
+  ChevronRight,
+  Shield,
+  CreditCard,
+  UserCheck
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -29,51 +38,199 @@ interface SidebarProps {
 }
 
 export function Sidebar({ children }: SidebarProps) {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
+  const { isAdmin } = useAdminProtection();
   const [userName, setUserName] = useState<string>('Usuário');
+  const [userLabel, setUserLabel] = useState<string>('Usuário');
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
+  const [isInitialized, setIsInitialized] = useState(false);
   const pathname = usePathname();
 
-  useEffect(() => {
-    // Busca dados do usuário se necessário
-    const fetchUser = async () => {
-      try {
-        const { data } = await api.get('/auth/profile');
-        setUserName(data.user.name || 'Usuário');
-      } catch (error) {
-        console.error('Erro ao buscar dados do usuário:', error);
-      }
-    };
+  const userType = user?.type;
 
-    fetchUser();
-  }, []);
-  const menuItems = [
+  // Memoizar a detecção de submenu ativo para evitar recálculos
+  const shouldExpandParametrizacao = useMemo(() => {
+    return pathname.startsWith('/categorias') || 
+           pathname.startsWith('/clientes') || 
+           pathname.startsWith('/fornecedores') || 
+           pathname.startsWith('/produtos-servicos');
+  }, [pathname]);
+
+  useEffect(() => {
+    // Usar dados do usuário já disponíveis no contexto de autenticação
+    if (user) {
+      setUserName(user.name || 'Usuário');
+      
+      // Definir o label baseado no tipo de usuário
+      if (user.type === 'ENTERPRISE') {
+        // Para ENTERPRISE, verificar se há informações do plano
+        const planName = (user as any).plan?.name;
+        setUserLabel(planName || 'Sem Plano');
+      } else {
+        // Para outros tipos, capitalizar apenas a primeira letra
+        const formattedType = user.type.charAt(0).toUpperCase() + user.type.slice(1).toLowerCase();
+        setUserLabel(formattedType);
+      }
+    } else {
+      // Se não há usuário, resetar os estados
+      setUserName('Usuário');
+      setUserLabel('Usuário');
+    }
+  }, [user]);
+
+  // Inicializar menus expandidos baseado na rota atual
+  useEffect(() => {
+    if (!isInitialized) {
+      const initialExpandedMenus: string[] = [];
+      
+      // Verificar se estamos em uma rota que deveria expandir o submenu de parametrização
+      if (shouldExpandParametrizacao) {
+        initialExpandedMenus.push('parametrizacao');
+      }
+      
+      // Verificar se estamos em uma rota admin que deveria expandir outros submenus (se houver no futuro)
+      // Pode adicionar mais lógica aqui para outros submenus
+      
+      if (initialExpandedMenus.length > 0) {
+        setExpandedMenus(initialExpandedMenus);
+      }
+      
+      setIsInitialized(true);
+    }
+  }, [shouldExpandParametrizacao, isInitialized]);
+
+  // Manter submenu aberto quando navegar para uma rota filha
+  useEffect(() => {
+    if (isInitialized) {
+      setExpandedMenus(prev => {
+        const newExpanded = [...prev];
+        const hasParametrizacao = newExpanded.includes('parametrizacao');
+        
+        if (shouldExpandParametrizacao && !hasParametrizacao) {
+          return [...newExpanded, 'parametrizacao'];
+        }
+        
+        // Se não deveria estar expandido e está, opcionalmente fechar
+        // Por enquanto vou manter aberto para melhor UX
+        
+        return prev; // Retornar o estado anterior se não há mudanças
+      });
+    }
+  }, [shouldExpandParametrizacao, isInitialized]);
+
+  const toggleSubmenu = useCallback((menuKey: string) => {
+    setExpandedMenus(prev => {
+      const newExpanded = [...prev];
+      
+      if (newExpanded.includes(menuKey)) {
+        // Se é 'parametrizacao' e estamos em uma de suas rotas, não fechar
+        if (menuKey === 'parametrizacao' && shouldExpandParametrizacao) {
+          return newExpanded; // Manter aberto
+        }
+        return newExpanded.filter(key => key !== menuKey);
+      } else {
+        return [...newExpanded, menuKey];
+      }
+    });
+  }, [shouldExpandParametrizacao]);
+
+  const menuItems = useMemo(() => [
     {
       href: '/dashboard',
       icon: LayoutDashboard,
       label: 'Dashboard',
       active: pathname === '/dashboard',
+      userType: 'ENTERPRISE', // Apenas para empresas
     },
     {
       href: '/nova-transacao',
       icon: Plus,
       label: 'Nova Transação',
       active: pathname === '/nova-transacao',
+      userType: 'ENTERPRISE', // Apenas para empresas
     },
     {
-      href: '/categorias',
-      icon: Tag,
-      label: 'Categorias',
-      active: pathname === '/categorias',
+      key: 'parametrizacao',
+      icon: Settings,
+      label: 'Parametrização',
+      isSubmenu: true,
+      active: pathname.startsWith('/categorias') || pathname.startsWith('/clientes') || pathname.startsWith('/fornecedores') || pathname.startsWith('/produtos-servicos'),
+      userType: 'ENTERPRISE', // Apenas para empresas
+      submenuItems: [
+        {
+          href: '/categorias',
+          icon: Tag,
+          label: 'Categorias',
+          active: pathname === '/categorias',
+        },
+        {
+          href: '/clientes',
+          icon: Users,
+          label: 'Clientes',
+          active: pathname === '/clientes',
+        },
+        {
+          href: '/fornecedores',
+          icon: Truck,
+          label: 'Fornecedores',
+          active: pathname === '/fornecedores',
+        },
+        {
+          href: '/produtos-servicos',
+          icon: Package,
+          label: 'Produtos/Serviços',
+          active: pathname === '/produtos-servicos',
+        },
+      ]
     },
     {
       href: '/configuracoes',
       icon: Settings,
       label: 'Configurações',
       active: pathname === '/configuracoes',
+      userType: 'ENTERPRISE', // Apenas para empresas
     },
-  ];
+    {
+      href: '/admin/dashboard',
+      icon: LayoutDashboard,
+      label: 'Dashboard Admin',
+      active: pathname === '/admin/dashboard',
+      userType: 'ADMIN', // Apenas para admins
+    },
+    {
+      href: '/admin/users',
+      icon: UserCheck,
+      label: 'Usuários',
+      active: pathname === '/admin/users',
+      userType: 'ADMIN', // Apenas para admins
+    },
+    {
+      href: '/admin/plans',
+      icon: CreditCard,
+      label: 'Planos',
+      active: pathname === '/admin/plans',
+      userType: 'ADMIN', // Apenas para admins
+    },
+    {
+      href: '/admin/permissions',
+      icon: Shield,
+      label: 'Permissões',
+      active: pathname === '/admin/permissions',
+      userType: 'ADMIN', // Apenas para admins
+    },
+  ], [pathname]);
+
+  const filteredMenuItems = useMemo(() => {
+    return menuItems.filter(item => {
+      // Se não há user logado, não mostrar nenhum menu
+      if (!userType) return false;
+      
+      // Filtrar baseado no tipo de usuário
+      return item.userType === userType;
+    });
+  }, [menuItems, userType]);
 
   const sidebarVariants = {
     expanded: { width: '16rem' },
@@ -178,12 +335,127 @@ export function Sidebar({ children }: SidebarProps) {
         }}
       >
         <nav className="space-y-2">
-          {menuItems.map((item) => {
+          {filteredMenuItems.map((item) => {
             const Icon = item.icon;
+            
+            // Se é um submenu
+            if (item.isSubmenu && item.submenuItems) {
+              const isExpanded = expandedMenus.includes(item.key || '');
+              return (
+                <div key={item.key}>
+                  <button
+                    onClick={() => toggleSubmenu(item.key || '')}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      item.active
+                        ? 'bg-blue-50 text-blue-700'
+                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    }`}
+                    style={{
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '0.5rem 0.75rem',
+                      borderRadius: '0.5rem',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      transition: 'colors 0.2s',
+                      backgroundColor: item.active ? '#eff6ff' : 'transparent',
+                      color: item.active ? '#1d4ed8' : '#6b7280',
+                      border: 'none',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <div className="flex items-center">
+                      <Icon className="h-5 w-5 flex-shrink-0" />
+                      <AnimatePresence>
+                        {!isCollapsed && (
+                          <motion.span
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -10 }}
+                            transition={{ duration: 0.2 }}
+                            className="ml-3"
+                            style={{ marginLeft: '0.75rem' }}
+                          >
+                            {item.label}
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                    
+                    <AnimatePresence>
+                      {!isCollapsed && (
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          {isExpanded ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4" />
+                          )}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </button>
+                  
+                  <AnimatePresence>
+                    {isExpanded && !isCollapsed && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="ml-6 mt-2 space-y-1"
+                      >
+                        {item.submenuItems.map((subItem) => {
+                          const SubIcon = subItem.icon;
+                          return (
+                            <Link
+                              key={subItem.href}
+                              href={subItem.href}
+                              className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                subItem.active
+                                  ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
+                                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                              }`}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                padding: '0.5rem 0.75rem',
+                                borderRadius: '0.5rem',
+                                fontSize: '0.875rem',
+                                fontWeight: '500',
+                                transition: 'colors 0.2s',
+                                backgroundColor: subItem.active ? '#eff6ff' : 'transparent',
+                                color: subItem.active ? '#1d4ed8' : '#6b7280',
+                                borderRight: subItem.active ? '2px solid #2563eb' : 'none',
+                                textDecoration: 'none',
+                              }}
+                              onClick={() => setIsMobileOpen(false)}
+                            >
+                              <SubIcon className="h-4 w-4 flex-shrink-0" />
+                              <span className="ml-3" style={{ marginLeft: '0.75rem' }}>
+                                {subItem.label}
+                              </span>
+                            </Link>
+                          );
+                        })}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              );
+            }
+            
+            // Menu item normal
             return (
               <Link
                 key={item.href}
-                href={item.href}
+                href={item.href!}
                 className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   item.active
                     ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
@@ -247,15 +519,17 @@ export function Sidebar({ children }: SidebarProps) {
               }}
             >
               <div 
-                className="flex items-center space-x-3"
+                className="flex items-center space-x-3 min-w-0 w-full"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.75rem',
+                  minWidth: 0,
+                  width: '100%',
                 }}
               >
                 <div 
-                  className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center"
+                  className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0"
                   style={{
                     width: '2rem',
                     height: '2rem',
@@ -264,6 +538,7 @@ export function Sidebar({ children }: SidebarProps) {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
+                    flexShrink: 0,
                   }}
                 >
                   <User className="h-4 w-4 text-gray-600" />
@@ -276,8 +551,13 @@ export function Sidebar({ children }: SidebarProps) {
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: -10 }}
                       transition={{ duration: 0.2 }}
-                      className="text-left"
-                      style={{ textAlign: 'left' }}
+                      className="text-left min-w-0 flex-1"
+                      style={{ 
+                        textAlign: 'left',
+                        minWidth: 0,
+                        flex: 1,
+                        overflow: 'hidden',
+                      }}
                     >
                       <p 
                         className="text-sm font-medium text-gray-900 truncate"
@@ -288,6 +568,7 @@ export function Sidebar({ children }: SidebarProps) {
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap',
+                          maxWidth: '100%',
                         }}
                       >
                         {userName}
@@ -299,7 +580,7 @@ export function Sidebar({ children }: SidebarProps) {
                           color: '#6b7280',
                         }}
                       >
-                        Usuário
+                        {userLabel}
                       </p>
                     </motion.div>
                   )}
@@ -325,7 +606,7 @@ export function Sidebar({ children }: SidebarProps) {
   );
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
       {/* Desktop Sidebar */}
       <div className="hidden lg:block">
         <SidebarContent />
@@ -370,25 +651,8 @@ export function Sidebar({ children }: SidebarProps) {
       </AnimatePresence>
 
       {/* Main Content */}
-      <div 
-        className="flex-1 flex flex-col overflow-hidden"
-        style={{
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-        }}
-      >
-        <main 
-          className="flex-1 overflow-auto bg-gray-50 p-6 lg:ml-0 ml-0"
-          style={{
-            flex: 1,
-            overflow: 'auto',
-            backgroundColor: '#f9fafb',
-            padding: '1.5rem',
-            marginLeft: 0,
-          }}
-        >
+      <div className="flex-1 flex flex-col h-screen overflow-hidden">
+        <main className="flex-1 overflow-y-auto bg-gray-50">
           {children}
         </main>
       </div>

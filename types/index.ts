@@ -4,12 +4,16 @@ export interface User {
   cnpj?: string;
   name: string;
   type: "ENTERPRISE" | "ADMIN";
+  planId?: string;
+  plan?: Plan;
 }
 
 export interface Category {
   id: string;
   name: string;
   description?: string;
+  status?: 'ACTIVE' | 'INACTIVE';
+  active?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -21,39 +25,64 @@ export interface CategoryFormData {
 
 export interface Transaction {
   id: string;
-  type: "entrada" | "saida";
+  type: "INCOME" | "COST";
+  classification?: "EXPENSE" | "COST";
+  typeExpense?: "FIXED" | "VARIABLE";
   value: number;
   date: string;
-  description: string;
+  description?: string;
   categoryId: string;
-  category?: Category; // Categoria populada quando necessário
+  category?: Category;
+  productServiceId?: string;
+  productService?: ProductsServices;
+  clientId?: string;
+  client?: Client;
+  supplierId?: string;
+  supplier?: Supplier;
+  status?: 'ACTIVE' | 'CANCELLED';
+  active?: boolean;
   userId: string;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface TransactionFormData {
-  type: "entrada" | "saida";
+  type: "INCOME" | "COST";
+  classification?: "EXPENSE" | "COST";
+  typeExpense?: "FIXED" | "VARIABLE";
   value: number;
   date: string;
-  description: string;
+  description?: string;
   categoryId: string;
+  productServiceId?: string;
+  clientId?: string;
+  supplierId?: string;
 }
 
 export interface CreateTransactionData {
-  type: "entrada" | "saida";
+  type: "INCOME" | "COST";
+  classification?: "EXPENSE" | "COST";
+  typeExpense?: "FIXED" | "VARIABLE";
   value: number;
   date: string;
-  description: string;
+  description?: string;
   categoryId: string;
+  productServiceId?: string;
+  clientId?: string;
+  supplierId?: string;
 }
 
 export interface UpdateTransactionData {
-  type?: "entrada" | "saida";
+  type?: "INCOME" | "COST";
+  classification?: "EXPENSE" | "COST";
+  typeExpense?: "FIXED" | "VARIABLE";
   value?: number;
   date?: string;
   description?: string;
   categoryId?: string;
+  productServiceId?: string;
+  clientId?: string;
+  supplierId?: string;
 }
 
 export interface MEIConfig {
@@ -93,4 +122,215 @@ export interface LoginCredentials {
 export interface AuthResponse {
   user: User;
   token?: string; // Opcional, pois o token é salvo nos cookies
+}
+
+export interface ProductsServices {
+  id: string;
+  name: string;
+  description?: string;
+  price: number;
+  type: "PRODUCT" | "SERVICE";
+  status?: 'ACTIVE' | 'INACTIVE';
+  active?: boolean;
+  userId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Client {
+  id: string;
+  cpfCnpj?: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  number?: string;
+  complement?: string;
+  district?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  status?: 'ACTIVE' | 'INACTIVE';
+  active?: boolean;
+  userId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Supplier {
+  id: string;
+  cnpj?: string;
+  name: string;
+  fantasyName?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  number?: string;
+  complement?: string;
+  district?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  status?: 'ACTIVE' | 'INACTIVE';
+  active?: boolean;
+  userId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ProductsServices DTOs
+export interface CreateProductsServicesData {
+  name: string;
+  description?: string;
+  price: number;
+  type: "PRODUCT" | "SERVICE";
+}
+
+export interface UpdateProductsServicesData {
+  name?: string;
+  description?: string;
+  price?: number;
+  type?: "PRODUCT" | "SERVICE";
+}
+
+// Client DTOs
+export interface CreateClientData {
+  cpfCnpj?: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  number?: string;
+  complement?: string;
+  district?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+}
+
+export interface UpdateClientData {
+  cpfCnpj?: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  number?: string;
+  complement?: string;
+  district?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+}
+
+// Supplier DTOs
+export interface CreateSupplierData {
+  cnpj?: string;
+  name: string;
+  fantasyName?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  number?: string;
+  complement?: string;
+  district?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+}
+
+export interface UpdateSupplierData {
+  cnpj?: string;
+  name?: string;
+  fantasyName?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  number?: string;
+  complement?: string;
+  district?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+}
+
+// Admin Panel Types
+export interface Plan {
+  id: string;
+  name: string;
+  description?: string;
+  price: number;
+  active?: boolean;
+  permissions?: Permission[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Permission {
+  id: string;
+  name: string;
+  description?: string;
+  active?: boolean;
+  plans?: Plan[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  cnpj?: string;
+  name: string;
+  type: "ENTERPRISE" | "ADMIN";
+  profileType?: string;
+  planId?: string;
+  plan?: Plan;
+  active?: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Plan DTOs
+export interface CreatePlanData {
+  name: string;
+  description?: string;
+  price: number;
+  permissionIds?: string[];
+}
+
+export interface UpdatePlanData {
+  name?: string;
+  description?: string;
+  price?: number;
+  permissionIds?: string[];
+}
+
+// Permission DTOs
+export interface CreatePermissionData {
+  name: string;
+  description?: string;
+}
+
+export interface UpdatePermissionData {
+  name?: string;
+  description?: string;
+}
+
+// User DTOs for Admin
+export interface CreateUserData {
+  email: string;
+  name: string;
+  cnpj?: string;
+  type: "ENTERPRISE" | "ADMIN";
+  profileType?: string;
+  planId?: string;
+  password: string;
+}
+
+export interface UpdateUserData {
+  email?: string;
+  name?: string;
+  cnpj?: string;
+  type?: "ENTERPRISE" | "ADMIN";
+  profileType?: string;
+  planId?: string;
 }

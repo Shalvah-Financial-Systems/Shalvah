@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Sidebar } from '@/components/Sidebar';
+import { EnterpriseLayout } from '@/components/EnterpriseLayout';
 import { Button } from '@/components/ui/button';
 import { CategoriesTable } from '@/components/CategoriesTable';
 import { CategoryModal } from '@/components/CategoryModal';
@@ -19,7 +19,7 @@ export default function CategoriasPage() {
     error,
     createCategory,
     updateCategory,
-    deleteCategory,
+    toggleCategoryStatus,
   } = useCategories();
 
   const alertModal = useAlertModal();
@@ -40,8 +40,8 @@ export default function CategoriasPage() {
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    await deleteCategory(id);
+  const handleToggleStatus = async (id: string) => {
+    await toggleCategoryStatus(id);
   };
 
   const openCreateModal = () => {
@@ -56,20 +56,20 @@ export default function CategoriasPage() {
 
   if (loading) {
     return (
-      <Sidebar>
+      <EnterpriseLayout>
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
             <p className="mt-4 text-gray-600">Carregando categorias...</p>
           </div>
         </div>
-      </Sidebar>
+      </EnterpriseLayout>
     );
   }
 
   if (error) {
     return (
-      <Sidebar>
+      <EnterpriseLayout>
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">
             <p className="text-red-600 mb-4">{error}</p>
@@ -78,16 +78,17 @@ export default function CategoriasPage() {
             </Button>
           </div>
         </div>
-      </Sidebar>
+      </EnterpriseLayout>
     );
   }
 
   return (
-    <Sidebar>
+    <EnterpriseLayout>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
+        className="p-6 max-w-7xl mx-auto"
       >
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
@@ -96,7 +97,8 @@ export default function CategoriasPage() {
             <p className="text-gray-600 mt-1">
               Gerencie as categorias das suas transações
             </p>
-          </div>          <Button onClick={openCreateModal} className="bg-blue-600 hover:bg-blue-700">
+          </div>
+          <Button onClick={openCreateModal} className="bg-blue-600 hover:bg-blue-700">
             <Plus className="mr-2 h-4 w-4" />
             Nova Categoria
           </Button>
@@ -107,10 +109,12 @@ export default function CategoriasPage() {
           categories={categories}
           loading={loading}
           onEdit={handleEdit}
-          onDelete={alertModal.showDeleteAlert}
-          onDeleteCategory={handleDelete}
+          onToggleStatus={alertModal.showToggleAlert}
+          onUpdateCategoryStatus={handleToggleStatus}
         />
-      </motion.div>{/* Modal de Categoria */}
+      </motion.div>
+
+      {/* Modal de Categoria */}
       <CategoryModal
         isOpen={isModalOpen}
         onClose={closeModal}
@@ -130,6 +134,6 @@ export default function CategoriasPage() {
         cancelText={alertModal.config?.cancelText}
         isLoading={alertModal.isLoading}
       />
-    </Sidebar>
+    </EnterpriseLayout>
   );
 }

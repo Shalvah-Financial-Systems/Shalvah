@@ -11,7 +11,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Edit, Trash2, Search, Filter, X } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Edit, ToggleLeft, ToggleRight, Search, Filter, X } from 'lucide-react';
 import { Category } from '@/types';
 import { motion } from 'framer-motion';
 
@@ -19,16 +20,16 @@ interface CategoriesTableProps {
   categories: Category[];
   loading: boolean;
   onEdit: (category: Category) => void;
-  onDelete: (categoryName: string, onConfirm: () => void) => void;
-  onDeleteCategory: (id: string) => void;
+  onToggleStatus: (categoryName: string, currentStatus: string, onConfirm: () => void) => void;
+  onUpdateCategoryStatus: (id: string) => void;
 }
 
 export function CategoriesTable({
   categories,
   loading,
   onEdit,
-  onDelete,
-  onDeleteCategory,
+  onToggleStatus,
+  onUpdateCategoryStatus,
 }: CategoriesTableProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<'name' | 'createdAt' | 'updatedAt'>('name');
@@ -38,8 +39,8 @@ export function CategoriesTable({
   // Filtrar e ordenar categorias
   const filteredAndSortedCategories = useMemo(() => {
     let filtered = categories.filter(category =>
-      category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (category.description || '').toLowerCase().includes(searchTerm.toLowerCase())
+      category?.name?.toLowerCase()?.includes(searchTerm.toLowerCase()) ||
+      (category?.description || '')?.toLowerCase()?.includes(searchTerm.toLowerCase())
     );
 
     // Ordenar
@@ -73,8 +74,10 @@ export function CategoriesTable({
     return filtered;
   }, [categories, searchTerm, sortBy, sortOrder]);
 
-  const handleDelete = (category: Category) => {
-    onDelete(category.name, () => onDeleteCategory(category.id));
+  const handleToggleStatus = (category: Category) => {
+    const isActive = category.active !== undefined ? category.active : true;
+    const action = isActive ? 'inativar' : 'ativar';
+    onToggleStatus(category.name, action, () => onUpdateCategoryStatus(category.id));
   };
 
   const clearFilters = () => {
@@ -211,10 +214,10 @@ export function CategoriesTable({
                   Descrição
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Criada em
+                  Status
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Atualizada em
+                  Criada em
                 </th>
                 <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Ações
@@ -241,11 +244,16 @@ export function CategoriesTable({
                         {category.description || '-'}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {formatDate(category.createdAt)}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <Badge
+                        variant={(category.active !== false) ? 'default' : 'secondary'}
+                        className={(category.active !== false) ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}
+                      >
+                        {(category.active !== false) ? 'Ativo' : 'Inativo'}
+                      </Badge>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {formatDate(category.updatedAt)}
+                      {formatDate(category.createdAt)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
                       <div className="flex justify-center gap-2">
@@ -261,11 +269,19 @@ export function CategoriesTable({
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleDelete(category)}
-                          className="text-red-600 hover:text-red-800 hover:bg-red-50"
-                          title="Excluir categoria"
+                          onClick={() => handleToggleStatus(category)}
+                          className={`${
+                            (category.active !== false)
+                              ? 'text-red-600 hover:text-red-800 hover:bg-red-50'
+                              : 'text-green-600 hover:text-green-800 hover:bg-green-50'
+                          }`}
+                          title={(category.active !== false) ? 'Inativar categoria' : 'Ativar categoria'}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          {(category.active !== false) ? (
+                            <ToggleRight className="h-4 w-4" />
+                          ) : (
+                            <ToggleLeft className="h-4 w-4" />
+                          )}
                         </Button>
                       </div>
                     </td>

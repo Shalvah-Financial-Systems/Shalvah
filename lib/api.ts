@@ -28,7 +28,7 @@ api.interceptors.response.use(
       const isLoginRequest = error.config?.url?.includes('/auth/login');      const isOnLoginPage = window.location.pathname === '/login';
       const isAuthRoute = error.config?.url?.includes('/auth/');
       const isProfileRequest = error.config?.url?.includes('/auth/profile');
-      const isPublicRoute = ['/', '/login', '/cadastro'].includes(window.location.pathname);
+      const isPublicRoute = ['/', '/login', '/cadastro', '/forgot-password', '/reset-password'].includes(window.location.pathname);
       
       if (isLogoutRequest || isLoginRequest || isOnLoginPage || isLoggingOut || 
           (isProfileRequest && isPublicRoute)) {

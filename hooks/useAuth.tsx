@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, createContext, useContext, useEffect } from 'react';
+import { useState, createContext, useContext, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { User, LoginCredentials, AuthResponse } from '@/types';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 
 interface AuthContextType {
   user: User | null;
-  login: (credentials: LoginCredentials) => Promise<boolean>;
+  login: (credentials: LoginCredentials) => Promise<{ success: boolean; user?: User }>;
   logout: () => void;
   clearAuth: () => void;
   revalidateUser: () => Promise<void>;
@@ -20,6 +21,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true); // Começar com true para evitar flash
   const [initialized, setInitialized] = useState(false);
+  const router = useRouter();
 
   // Verificar se há usuário autenticado ao carregar a página
   useEffect(() => {
@@ -28,10 +30,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setInitialized(true);
     }
   }, [initialized]);
-  const checkAuthStatus = async () => {
+  
+  const fetchUserProfile = useCallback(async () => {
+    try {
+      const response = await api.get('/auth/profile');
+      // Verificar se a resposta tem uma propriedade 'user' ou é o usuário direto
+      const userData = response.data.user || response.data;
+      setUser(userData);
+    } catch (error: any) {
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const checkAuthStatus = useCallback(async () => {
     // Só tentar buscar perfil se estivermos em uma rota que indica autenticação
     const currentPath = window.location.pathname;
-    const isAuthenticatedRoute = ['/dashboard', '/categorias', '/nova-transacao', '/configuracoes'].some(
+    const isAuthenticatedRoute = ['/dashboard', '/categorias', '/nova-transacao', '/configuracoes', '/admin', '/clientes', '/fornecedores', '/produtos-servicos'].some(
       route => currentPath.startsWith(route)
     );
 
@@ -40,18 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } else {
       setLoading(false);
     }
-  };
-
-  const fetchUserProfile = async () => {
-    try {
-      const response = await api.get('/auth/profile');
-      setUser(response.data);
-    } catch (error: any) {
-      setUser(null);
-    } finally {
-      setLoading(false);
-    }
-  };  const login = async (credentials: LoginCredentials): Promise<boolean> => {
+  }, [fetchUserProfile]);  const login = async (credentials: LoginCredentials): Promise<{ success: boolean; user?: User }> => {
     setLoading(true);
     try {
       const response = await api.post<AuthResponse>('/auth/login', credentials);
@@ -63,12 +68,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Pequeno delay para garantir que o estado foi atualizado
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      return true;
+      return { success: true, user: response.data.user };
     } catch (error: unknown) {
       console.error('Erro no login:', error);
       const message = error instanceof Error ? error.message : 'Erro ao fazer login';
       toast.error(message);
-      return false;
+      return { success: false };
     } finally {
       setLoading(false);
     }
@@ -81,6 +86,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setUser(null);
       setLoading(false);
+      // Redirecionar explicitamente para /login após logout
+      router.push('/login');
     }
   };
   
@@ -88,9 +95,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   };
 
-  const revalidateUser = async () => {
+  const revalidateUser = useCallback(async () => {
     await fetchUserProfile();
-  };  return (
+  }, [fetchUserProfile]);  return (
     <AuthContext.Provider value={{ user, login, logout, clearAuth, revalidateUser, loading }}>
       {children}
     </AuthContext.Provider>

@@ -92,11 +92,10 @@ export function DeleteTransactionModal({
                   </div>
                   
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-500">Valor:</span>
-                    <span className={`text-sm font-medium ${
-                      transaction.type === 'entrada' ? 'text-green-600' : 'text-red-600'
-                    }`}>
-                      {transaction.type === 'entrada' ? '+' : '-'} {formatCurrency(transaction.value)}
+                    <span className="text-sm text-gray-500">Valor:</span>                <span className={`text-sm font-medium ${
+                  transaction.type === 'INCOME' ? 'text-green-600' : 'text-red-600'
+                }`}>
+                  {transaction.type === 'INCOME' ? '+' : '-'} {formatCurrency(transaction.value)}
                     </span>
                   </div>
                   

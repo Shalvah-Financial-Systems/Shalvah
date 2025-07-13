@@ -5,11 +5,12 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Sidebar } from '@/components/Sidebar';
+import { EnterpriseLayout } from '@/components/EnterpriseLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { CurrencyInput } from '@/components/ui/currency-input';
 import { MEIConfig } from '@/types';
 import api from '@/lib/api';
 import { toast } from 'sonner';
@@ -107,7 +108,7 @@ export default function ConfiguracoesPage() {
   }
 
   return (
-    <Sidebar>
+    <EnterpriseLayout>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -159,17 +160,11 @@ export default function ConfiguracoesPage() {
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                   <div className="space-y-2">
                     <Label htmlFor="monthlyRevenue">Faturamento Mensal Estimado</Label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-2.5 text-gray-500">R$</span>
-                      <Input
-                        id="monthlyRevenue"
-                        type="number"
-                        step="0.01"
-                        placeholder="0,00"
-                        className="pl-10"
-                        {...register('monthlyRevenue', { valueAsNumber: true })}
-                      />
-                    </div>
+                    <CurrencyInput
+                      value={watch('monthlyRevenue') || 0}
+                      onChange={(value) => setValue('monthlyRevenue', value)}
+                      showCurrencySymbol={true}
+                    />
                     {errors.monthlyRevenue && (
                       <p className="text-sm text-red-600">{errors.monthlyRevenue.message}</p>
                     )}
@@ -241,6 +236,6 @@ export default function ConfiguracoesPage() {
             </Card>
           </div>
         </motion.div>
-    </Sidebar>
+    </EnterpriseLayout>
   );
 }
