@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: process.env.NEXT_PUBLIC_API_URL, // Use a variável de ambiente ou fallback para '/api'
   withCredentials: true,
 });
 
