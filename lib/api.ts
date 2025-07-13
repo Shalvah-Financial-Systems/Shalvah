@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost:3000',
+  baseURL: '/api',
   withCredentials: true,
 });
 
@@ -25,7 +25,8 @@ api.interceptors.response.use(
       // 4. Já existe um processo de logout em andamento
       // 5. É uma requisição de profile em rota pública (inicialização)
       const isLogoutRequest = error.config?.url?.includes('/auth/logout');
-      const isLoginRequest = error.config?.url?.includes('/auth/login');      const isOnLoginPage = window.location.pathname === '/login';
+      const isLoginRequest = error.config?.url?.includes('/auth/login');
+      const isOnLoginPage = window.location.pathname === '/login';
       const isAuthRoute = error.config?.url?.includes('/auth/');
       const isProfileRequest = error.config?.url?.includes('/auth/profile');
       const isPublicRoute = ['/', '/login', '/cadastro', '/forgot-password', '/reset-password'].includes(window.location.pathname);
