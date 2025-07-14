@@ -157,15 +157,20 @@ export default function LoginPage() {
     
     const result = await login(submitData);
     if (result.success && result.user) {
-      // Pequeno delay para garantir que o estado do usuário seja atualizado
-      setTimeout(() => {
-        // Redirecionar baseado no tipo de usuário
-        if (result.user?.type === 'ADMIN') {
-          router.push('/admin/dashboard');
+      // Em produção (Vercel), usar window.location para redirecionamento mais confiável
+      if (typeof window !== 'undefined') {
+        const redirectPath = result.user?.type === 'ADMIN' ? '/admin/dashboard' : '/dashboard';
+        
+        // Usar window.location em produção para garantir redirecionamento
+        if (process.env.NODE_ENV === 'production') {
+          window.location.href = redirectPath;
         } else {
-          router.push('/dashboard');
+          // Em desenvolvimento, usar router.push
+          setTimeout(() => {
+            router.push(redirectPath);
+          }, 100);
         }
-      }, 100);
+      }
     }
     setIsLoading(false);
   };

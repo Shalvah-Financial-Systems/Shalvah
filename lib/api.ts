@@ -1,12 +1,19 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL, // Use a variável de ambiente ou fallback para '/api'
+  baseURL: process.env.NODE_ENV === 'production' 
+    ? process.env.NEXT_PUBLIC_API_URL || '/api'
+    : '/api',
   withCredentials: true,
+  timeout: 10000, // 10 segundos de timeout
 });
 
 // Interceptador para incluir token nas requisições
 api.interceptors.request.use((config) => {
+  // Em produção, garantir que o baseURL está correto
+  if (process.env.NODE_ENV === 'production' && !config.baseURL?.startsWith('http')) {
+    config.baseURL = process.env.NEXT_PUBLIC_API_URL || window.location.origin + '/api';
+  }
   return config;
 });
 
@@ -18,16 +25,9 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {    
     if (error.response?.status === 401) {
-      // Não processar logout se:
-      // 1. Já estamos fazendo logout
-      // 2. Estamos fazendo login
-      // 3. Já estamos na página de login
-      // 4. Já existe um processo de logout em andamento
-      // 5. É uma requisição de profile em rota pública (inicialização)
       const isLogoutRequest = error.config?.url?.includes('/auth/logout');
       const isLoginRequest = error.config?.url?.includes('/auth/login');
       const isOnLoginPage = window.location.pathname === '/login';
-      const isAuthRoute = error.config?.url?.includes('/auth/');
       const isProfileRequest = error.config?.url?.includes('/auth/profile');
       const isPublicRoute = ['/', '/login', '/cadastro', '/forgot-password', '/reset-password'].includes(window.location.pathname);
       
@@ -36,11 +36,9 @@ api.interceptors.response.use(
         return Promise.reject(error);
       }
       
-      // Marcar que estamos fazendo logout para evitar múltiplas tentativas
       isLoggingOut = true;
       
       try {
-        // Pequeno delay para evitar race conditions
         await new Promise(resolve => setTimeout(resolve, 100));
         await api.post('/auth/logout');
       } catch (logoutError) {
@@ -51,7 +49,13 @@ api.interceptors.response.use(
       setTimeout(() => {
         isLoggingOut = false;
       }, 1000);
-      window.location.href = '/login';
+      
+      // Usar window.location em produção
+      if (process.env.NODE_ENV === 'production') {
+        window.location.href = '/login';
+      } else {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

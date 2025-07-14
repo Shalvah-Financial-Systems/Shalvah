@@ -65,9 +65,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(response.data.user);
       toast.success('Login realizado com sucesso!');
       
-      // Pequeno delay para garantir que o estado foi atualizado
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
       return { success: true, user: response.data.user };
     } catch (error: unknown) {
       console.error('Erro no login:', error);
