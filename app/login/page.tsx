@@ -157,19 +157,12 @@ export default function LoginPage() {
     
     const result = await login(submitData);
     if (result.success && result.user) {
-      // Em produção (Vercel), usar window.location para redirecionamento mais confiável
       if (typeof window !== 'undefined') {
         const redirectPath = result.user?.type === 'ADMIN' ? '/admin/dashboard' : '/dashboard';
         
-        // Usar window.location em produção para garantir redirecionamento
-        if (process.env.NODE_ENV === 'production') {
-          window.location.href = redirectPath;
-        } else {
-          // Em desenvolvimento, usar router.push
-          setTimeout(() => {
-            router.push(redirectPath);
-          }, 100);
-        }
+        setTimeout(() => {
+          router.push(redirectPath);
+        }, 100);
       }
     }
     setIsLoading(false);
