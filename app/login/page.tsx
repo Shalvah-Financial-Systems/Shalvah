@@ -147,25 +147,34 @@ export default function LoginPage() {
     setValue('identifier', formattedValue);
   };
   const onSubmit = async (data: LoginFormData) => {
+    // Evitar múltiplas submissões
+    if (isLoading) {
+      console.log('Login já em andamento');
+      return;
+    }
+    
     setIsLoading(true);
     
-    // Garantir que enviamos o valor atual do input
-    const submitData = {
-      ...data,
-      identifier: identifierValue
-    };
-    
-    const result = await login(submitData);
-    if (result.success && result.user) {
-      if (typeof window !== 'undefined') {
-        const redirectPath = result.user?.type === 'ADMIN' ? '/admin/dashboard' : '/dashboard';
-        
+    try {
+      const submitData = {
+        ...data,
+        identifier: identifierValue
+      };
+            
+      const result = await login(submitData);
+      
+      console.log('Resultado do login:', result);
+      
+      if (result.success) {
         setTimeout(() => {
-          router.push(redirectPath);
-        }, 100);
+          window.location.href = (user?.type === 'ADMIN' ? 'admin/dashboard' : 'dashboard');
+        }, 500);
       }
+    } catch (error) {
+      console.error('Erro na submissão:', error);
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
   return (
     <div 
