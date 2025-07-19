@@ -56,18 +56,64 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } else {
       setLoading(false);
     }
-  }, [fetchUserProfile]);  const login = async (credentials: LoginCredentials): Promise<{ success: boolean; user?: User }> => {
+  }, [fetchUserProfile]);  const login = async (credentials: LoginCredentials): Promise<{ success: boolean; user?: User; redirectTo?: string }> => {
+    if (loading) {
+      console.log('Login já em andamento, ignorando chamada duplicada');
+      return { success: false };
+    }
+    
     setLoading(true);
     try {
+      console.log('Iniciando login para:', credentials.identifier);
+      console.log('Ambiente:', process.env.NODE_ENV);
+      console.log('API URL:', process.env.NEXT_PUBLIC_API_URL);
+      
       const response = await api.post<AuthResponse>('/auth/login', credentials);
       
-      // Definir o usuário imediatamente com os dados da resposta
+      console.log('Resposta do login:', {
+        success: !!response.data,
+        user: response.data.user,
+        hasToken: !!response.data.token,
+      });
+      
+      // Verificar se já tem usuário setado para evitar duplicação
+      if (user && user.id === response.data.user.id) {
+        console.log('Usuário já está logado, evitando redefinição');
+        return { success: true, user: response.data.user };
+      }
+      
       setUser(response.data.user);
       toast.success('Login realizado com sucesso!');
       
-      return { success: true, user: response.data.user };
+      const redirectPath = response.data.user?.type === 'ADMIN' ? '/admin/dashboard' : '/dashboard';
+      
+      console.log('Definindo redirecionamento para:', redirectPath);
+      
+      // Em produção, forçar redirecionamento mais direto
+      if (process.env.NODE_ENV === 'production') {
+        setTimeout(() => {
+          console.log('Executando redirecionamento para:', redirectPath);
+          window.location.href = redirectPath;
+        }, 1000); // Aumentar delay para 1 segundo
+      }
+      
+      return { 
+        success: true, 
+        user: response.data.user,
+        redirectTo: redirectPath
+      };
     } catch (error: unknown) {
       console.error('Erro no login:', error);
+      
+      // Log mais detalhado do erro
+      if (error instanceof Error) {
+        console.error('Detalhes do erro:', {
+          message: error.message,
+          name: error.name,
+          stack: error.stack,
+        });
+      }
+      
       const message = error instanceof Error ? error.message : 'Erro ao fazer login';
       toast.error(message);
       return { success: false };
