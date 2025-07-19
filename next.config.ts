@@ -2,15 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   eslint: {
-    // Warning: This allows production builds to successfully complete even if
-    // your project has ESLint errors.
     ignoreDuringBuilds: true,
   },
   typescript: {
-    // !! WARN !!
-    // Dangerously allow production builds to successfully complete even if
-    // your project has type errors.
-    // !! WARN !!
     ignoreBuildErrors: true,
   },
 
@@ -28,20 +22,40 @@ const nextConfig: NextConfig = {
     ];
   },
 
-  // Headers para permitir CORS
+  // Headers melhorados para CORS e cookies
   async headers() {
     return [
       {
         source: "/:path*",
         headers: [
           { key: "Access-Control-Allow-Credentials", value: "true" },
-          { key: "Access-Control-Allow-Origin", value: process.env.BACKEND_URL || "*" },
+          {
+            key: "Access-Control-Allow-Origin",
+            value:
+              process.env.NODE_ENV === "production"
+                ? process.env.BACKEND_URL || "*"
+                : "*",
+          },
           { key: "Access-Control-Allow-Methods", value: "GET,OPTIONS,PATCH,DELETE,POST,PUT" },
-          { key: "Access-Control-Allow-Headers", value: "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization" },
+          {
+            key: "Access-Control-Allow-Headers",
+            value:
+              "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization, Cookie, Set-Cookie",
+          },
+          // Headers específicos para cookies
+          { key: "Access-Control-Expose-Headers", value: "Set-Cookie" },
+          { key: "Vary", value: "Origin" },
         ],
       },
     ];
   },
+
+  // Configurações específicas para cookies em produção
+  ...(process.env.NODE_ENV === "production" && {
+    async redirects() {
+      return [];
+    },
+  }),
 };
 
 export default nextConfig;

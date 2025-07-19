@@ -13,6 +13,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { motion } from 'framer-motion';
 import { Mail, Building2 } from 'lucide-react';
 import Link from 'next/link';
+import { User } from '@/types';
 
 // Função para validar CNPJ
 const isValidCNPJ = (cnpj: string) => {
@@ -146,8 +147,14 @@ export default function LoginPage() {
     setIdentifierValue(formattedValue);
     setValue('identifier', formattedValue);
   };
+  // Defina o tipo de retorno esperado do login
+  type LoginResult = {
+    success: boolean;
+    user?: User;
+    redirectTo?: string;
+  };
+
   const onSubmit = async (data: LoginFormData) => {
-    // Evitar múltiplas submissões
     if (isLoading) {
       console.log('Login já em andamento');
       return;
@@ -160,18 +167,30 @@ export default function LoginPage() {
         ...data,
         identifier: identifierValue
       };
-            
-      const result = await login(submitData);
       
-      console.log('Resultado do login:', result);
+      console.log('=== INICIANDO LOGIN ===');
+      console.log('Cookies antes do login:', document.cookie);
       
-      if (result.success) {
+      const result = await login(submitData) as LoginResult;
+      
+      console.log('=== RESULTADO DO LOGIN ===');
+      console.log('Success:', result.success);
+      console.log('Cookies após login:', document.cookie);
+      
+      if (result.success && result.redirectTo) {
+        console.log('Login bem-sucedido, redirecionando em 2 segundos...');
+        
+        // Aguardar tempo suficiente para os cookies serem definidos
         setTimeout(() => {
-          window.location.href = (user?.type === 'ADMIN' ? 'admin/dashboard' : 'dashboard');
-        }, 500);
+          console.log('Cookies antes do redirecionamento:', document.cookie);
+          console.log('Executando redirecionamento para:', result.redirectTo);
+          
+          // Usar replace para evitar voltar à página de login
+          window.location.replace(result.redirectTo!);
+        }, 2000); // Aumentar para 2 segundos
       }
     } catch (error) {
-      console.error('Erro na submissão:', error);
+      console.error('Erro no login:', error);
     } finally {
       setIsLoading(false);
     }

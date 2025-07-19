@@ -16,33 +16,34 @@ export function middleware(request: NextRequest) {
     '/configuracoes'
   ];
   
-  // Rotas públicas
-  const publicRoutes = [
-    '/',
-    '/login',
-    '/cadastro',
-    '/forgot-password',
-    '/reset-password'
-  ];
-  
   // Verificar se a rota atual é protegida
   const isProtectedRoute = protectedRoutes.some(route => 
     pathname.startsWith(route)
   );
   
-  // Verificar se tem token de autenticação
-  const authToken = request.cookies.get('auth-token') || 
-                   request.cookies.get('session') ||
-                   request.cookies.get('access_token');
+  // Verificar se tem tokens de autenticação
+  const accessToken = request.cookies.get('access_token');
+  const refreshToken = request.cookies.get('refresh_token');
+  const hasAuthTokens = accessToken || refreshToken;
+  
+  console.log('Middleware executando:', {
+    pathname,
+    isProtectedRoute,
+    hasAuthTokens: !!hasAuthTokens,
+    accessToken: !!accessToken,
+    refreshToken: !!refreshToken,
+  });
   
   // Se está tentando acessar rota protegida sem autenticação
-  if (isProtectedRoute && !authToken) {
+  if (isProtectedRoute && !hasAuthTokens) {
+    console.log('Redirecionando para login - sem tokens');
     const loginUrl = new URL('/login', request.url);
     return NextResponse.redirect(loginUrl);
   }
   
-  // Se está autenticado e tentando acessar página de login
-  if (authToken && pathname === '/login') {
+  // Se está autenticado e tentando acessar página de login, redirecionar para dashboard
+  if (hasAuthTokens && pathname === '/login') {
+    console.log('Redirecionando para dashboard - já autenticado');
     const dashboardUrl = new URL('/dashboard', request.url);
     return NextResponse.redirect(dashboardUrl);
   }

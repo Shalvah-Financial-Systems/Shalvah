@@ -44,19 +44,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const checkAuthStatus = useCallback(async () => {
-    // Só tentar buscar perfil se estivermos em uma rota que indica autenticação
-    const currentPath = window.location.pathname;
-    const isAuthenticatedRoute = ['/dashboard', '/categorias', '/nova-transacao', '/configuracoes', '/admin', '/clientes', '/fornecedores', '/produtos-servicos'].some(
-      route => currentPath.startsWith(route)
-    );
-
-    if (isAuthenticatedRoute) {
-      await fetchUserProfile();
-    } else {
-      setLoading(false);
-    }
-  }, [fetchUserProfile]);  const login = async (credentials: LoginCredentials): Promise<{ success: boolean; user?: User; redirectTo?: string }> => {
+  const login = async (credentials: LoginCredentials): Promise<{ success: boolean; user?: User; redirectTo?: string }> => {
     if (loading) {
       console.log('Login já em andamento, ignorando chamada duplicada');
       return { success: false };
@@ -65,37 +53,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(true);
     try {
       console.log('Iniciando login para:', credentials.identifier);
-      console.log('Ambiente:', process.env.NODE_ENV);
-      console.log('API URL:', process.env.NEXT_PUBLIC_API_URL);
       
       const response = await api.post<AuthResponse>('/auth/login', credentials);
       
-      console.log('Resposta do login:', {
-        success: !!response.data,
-        user: response.data.user,
-        hasToken: !!response.data.token,
+      console.log('Resposta do login recebida:', {
+        status: response.status,
+        hasUser: !!response.data.user,
+        userType: response.data.user?.type,
       });
       
-      // Verificar se já tem usuário setado para evitar duplicação
-      if (user && user.id === response.data.user.id) {
-        console.log('Usuário já está logado, evitando redefinição');
-        return { success: true, user: response.data.user };
-      }
+      // Aguardar um pouco para os cookies serem definidos pelo navegador
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      console.log('Cookies após login:', {
+        allCookies: document.cookie,
+        hasAccessToken: document.cookie.includes('access_token'),
+        hasRefreshToken: document.cookie.includes('refresh_token'),
+      });
       
       setUser(response.data.user);
       toast.success('Login realizado com sucesso!');
       
       const redirectPath = response.data.user?.type === 'ADMIN' ? '/admin/dashboard' : '/dashboard';
       
-      console.log('Definindo redirecionamento para:', redirectPath);
-      
-      // Em produção, forçar redirecionamento mais direto
-      if (process.env.NODE_ENV === 'production') {
-        setTimeout(() => {
-          console.log('Executando redirecionamento para:', redirectPath);
-          window.location.href = redirectPath;
-        }, 1000); // Aumentar delay para 1 segundo
-      }
+      console.log('Redirecionamento definido para:', redirectPath);
       
       return { 
         success: true, 
@@ -104,16 +85,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       };
     } catch (error: unknown) {
       console.error('Erro no login:', error);
-      
-      // Log mais detalhado do erro
-      if (error instanceof Error) {
-        console.error('Detalhes do erro:', {
-          message: error.message,
-          name: error.name,
-          stack: error.stack,
-        });
-      }
-      
       const message = error instanceof Error ? error.message : 'Erro ao fazer login';
       toast.error(message);
       return { success: false };
@@ -140,7 +111,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const revalidateUser = useCallback(async () => {
     await fetchUserProfile();
-  }, [fetchUserProfile]);  return (
+  }, [fetchUserProfile]);  // Função para verificar autenticação - modificada para não interferir com login
+  const checkAuthStatus = useCallback(async () => {
+    // Não verificar status se acabamos de fazer login
+    if (loading) {
+      return;
+    }
+    
+    // Se estamos na página de login, não fazer verificação automática
+    if (typeof window !== 'undefined' && window.location.pathname === '/login') {
+      return;
+    }
+    
+    try {
+      const response = await api.get('/auth/profile');
+      if (response.data && response.data.id !== user?.id) {
+        setUser(response.data);
+      }
+    } catch (error) {
+      console.log('Erro ao verificar autenticação:', error);
+      // Não limpar usuário automaticamente, deixar o interceptor lidar com isso
+    }
+  }, [user?.id, loading]);
+
+  return (
     <AuthContext.Provider value={{ user, login, logout, clearAuth, revalidateUser, loading }}>
       {children}
     </AuthContext.Provider>
