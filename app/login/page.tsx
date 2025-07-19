@@ -155,11 +155,15 @@ export default function LoginPage() {
   };
 
   const onSubmit = async (data: LoginFormData) => {
+    console.log('=== PÁGINA DE LOGIN - onSubmit chamado ===');
+    console.log('Estado isLoading da página:', isLoading);
+    
     if (isLoading) {
-      console.log('Login já em andamento');
+      console.log('Página: Login já em andamento');
       return;
     }
     
+    console.log('Definindo isLoading da página como true');
     setIsLoading(true);
     
     try {
@@ -170,11 +174,14 @@ export default function LoginPage() {
       
       console.log('=== INICIANDO LOGIN ===');
       console.log('Cookies antes do login:', document.cookie);
+      console.log('Dados a serem enviados:', { ...submitData, password: '[HIDDEN]' });
       
       const result = await login(submitData) as LoginResult;
       
       console.log('=== RESULTADO DO LOGIN ===');
       console.log('Success:', result.success);
+      console.log('User:', result.user);
+      console.log('RedirectTo:', result.redirectTo);
       console.log('Cookies após login:', document.cookie);
       
       if (result.success && result.redirectTo) {
@@ -187,11 +194,14 @@ export default function LoginPage() {
           
           // Usar replace para evitar voltar à página de login
           window.location.replace(result.redirectTo!);
-        }, 2000); // Aumentar para 2 segundos
+        }, 2000);
+      } else {
+        console.log('Login falhou ou sem redirectTo');
       }
     } catch (error) {
-      console.error('Erro no login:', error);
+      console.error('Erro na página de login:', error);
     } finally {
+      console.log('Definindo isLoading da página como false');
       setIsLoading(false);
     }
   };

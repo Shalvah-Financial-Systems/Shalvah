@@ -19,18 +19,38 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true); // Começar com true para evitar flash
+  const [loading, setLoading] = useState(false); // Começar com false
   const [initialized, setInitialized] = useState(false);
   const router = useRouter();
 
-  // Verificar se há usuário autenticado ao carregar a página
+  // useEffect para inicialização
   useEffect(() => {
-    if (!initialized) {
-      checkAuthStatus();
-      setInitialized(true);
-    }
-  }, [initialized]);
-  
+    const initializeAuth = async () => {
+      console.log('Inicializando autenticação...');
+      
+      // Se estamos na página de login, não verificar autenticação
+      if (typeof window !== 'undefined' && window.location.pathname === '/login') {
+        console.log('Na página de login, pulando verificação inicial');
+        setInitialized(true);
+        return;
+      }
+      
+      try {
+        const response = await api.get('/auth/profile');
+        if (response.data) {
+          setUser(response.data);
+          console.log('Usuário autenticado encontrado:', response.data);
+        }
+      } catch (error) {
+        console.log('Nenhum usuário autenticado encontrado');
+      } finally {
+        setInitialized(true);
+      }
+    };
+
+    initializeAuth();
+  }, []);
+
   const fetchUserProfile = useCallback(async () => {
     try {
       const response = await api.get('/auth/profile');
@@ -45,18 +65,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = async (credentials: LoginCredentials): Promise<{ success: boolean; user?: User; redirectTo?: string }> => {
+    console.log('=== LOGIN HOOK CHAMADO ===');
+    console.log('Estado atual do loading:', loading);
+    
     if (loading) {
       console.log('Login já em andamento, ignorando chamada duplicada');
       return { success: false };
     }
     
+    console.log('Definindo loading como true');
     setLoading(true);
+    
     try {
-      console.log('Iniciando login para:', credentials.identifier);
+      console.log('Fazendo requisição para:', credentials.identifier);
       
       const response = await api.post<AuthResponse>('/auth/login', credentials);
       
-      console.log('Resposta do login recebida:', {
+      console.log('Resposta recebida:', {
         status: response.status,
         hasUser: !!response.data.user,
         userType: response.data.user?.type,
@@ -89,6 +114,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       toast.error(message);
       return { success: false };
     } finally {
+      console.log('Definindo loading como false');
       setLoading(false);
     }
   };  const logout = async () => {
