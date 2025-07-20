@@ -26,6 +26,17 @@ export function middleware(request: NextRequest) {
   const refreshToken = request.cookies.get('refresh_token');
   const hasAuthTokens = accessToken || refreshToken;
   
+  // Debug temporário para verificar cookies
+  if (pathname === '/dashboard' || pathname.startsWith('/admin')) {
+    console.log('Middleware - Rota:', pathname);
+    console.log('Middleware - Cookies encontrados:', {
+      accessToken: !!accessToken,
+      refreshToken: !!refreshToken,
+      hasAuthTokens,
+      allCookies: request.cookies.getAll()
+    });
+  }
+  
   // Se está tentando acessar rota protegida sem autenticação
   if (isProtectedRoute && !hasAuthTokens) {
     const loginUrl = new URL('/login', request.url);

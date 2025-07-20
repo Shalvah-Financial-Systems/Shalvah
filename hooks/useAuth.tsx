@@ -76,6 +76,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(response.data.user);
       toast.success('Login realizado com sucesso!');
       
+      // Verificar se os cookies foram definidos
+      const cookiesCheck = document.cookie;
+      console.log('Cookies após login no useAuth:', cookiesCheck);
+      
+      // Se não temos cookies, tentar fazer uma nova requisição para verificar auth
+      if (!cookiesCheck.includes('access_token')) {
+        console.log('Cookies não encontrados, verificando com nova requisição...');
+        try {
+          const profileResponse = await api.get('/auth/profile');
+          console.log('Profile response:', profileResponse.data);
+        } catch (profileError) {
+          console.log('Erro ao verificar profile:', profileError);
+        }
+      }
+      
       const redirectPath = response.data.user?.type === 'ADMIN' ? '/admin/dashboard' : '/dashboard';
       
       return { 

@@ -170,10 +170,15 @@ export default function LoginPage() {
       const result = await login(submitData) as LoginResult;
       
       if (result.success && result.redirectTo) {
-        // Redirecionar após login bem-sucedido
+        // Aguardar mais tempo e verificar se os cookies foram definidos
         setTimeout(() => {
-          window.location.replace(result.redirectTo!);
-        }, 1000);
+          // Verificar se os cookies foram definidos
+          const cookies = document.cookie;
+          console.log('Cookies após login:', cookies);
+          
+          // Tentar usar router.push em vez de window.location.replace
+          router.push(result.redirectTo!);
+        }, 2000); // Aumentar para 2 segundos
       }
     } catch (error) {
       // Erro será tratado pelo hook useAuth
