@@ -21,7 +21,7 @@ export async function clearAuthCookies(): Promise<void> {
     });
     
   } catch (error) {
-    console.error('Erro ao fazer logout via API:', error);
+    // Erro silencioso no logout, apenas limpar cookies
         const authCookieNames = ['access_token', 'refresh_token'];
     authCookieNames.forEach(cookieName => {
       Cookies.remove(cookieName, { path: '/' });

@@ -4,8 +4,6 @@ export interface User {
   cnpj?: string;
   name: string;
   type: "ENTERPRISE" | "ADMIN";
-  planId?: string;
-  plan?: Plan;
 }
 
 export interface Category {

@@ -20,20 +20,12 @@ api.interceptors.request.use((config) => {
   
   // Se é uma requisição de login e já há uma em andamento, bloquear
   if (config.url?.includes('/auth/login') && requestsInProgress.has(requestKey)) {
-    console.log('Bloqueando requisição duplicada de login');
     return Promise.reject(new Error('Requisição duplicada'));
   }
   
   if (config.url?.includes('/auth/login')) {
     requestsInProgress.add(requestKey);
   }
-  
-  console.log('API Request:', {
-    url: config.url,
-    method: config.method,
-    baseURL: config.baseURL,
-    production: process.env.NODE_ENV === 'production',
-  });
   
   return config;
 });
@@ -49,13 +41,6 @@ api.interceptors.response.use(
     // Remover da lista de requisições em andamento
     if (response.config.url?.includes('/auth/login')) {
       requestsInProgress.delete(requestKey);
-      
-      console.log('Login realizado com sucesso:', {
-        status: response.status,
-        hasData: !!response.data,
-        hasUser: !!response.data?.user,
-        cookies: document.cookie.includes('access_token') ? 'Cookies presentes' : 'Sem cookies'
-      });
     }
     
     return response;
@@ -67,13 +52,6 @@ api.interceptors.response.use(
     if (error.config?.url?.includes('/auth/login')) {
       requestsInProgress.delete(requestKey);
     }
-    
-    console.log('API Response Error:', {
-      url: error.config?.url,
-      status: error.response?.status,
-      message: error.message,
-      data: error.response?.data,
-    });
     
     // CRÍTICO: Não fazer logout automático se acabamos de fazer login com sucesso
     if (error.response?.status === 401 && 
@@ -94,15 +72,13 @@ api.interceptors.response.use(
       setTimeout(() => {
         if (!isLoggingOut) {
           isLoggingOut = true;
-          console.log('Fazendo logout automático devido a 401 (após delay)');
           
           api.post('/auth/logout').catch(() => {
-            console.log('Erro ao fazer logout automático');
+            // Erro silencioso no logout automático
           }).finally(() => {
             setTimeout(() => {
               isLoggingOut = false;
               if (typeof window !== 'undefined') {
-                console.log('Redirecionando para /login');
                 window.location.replace('/login');
               }
             }, 500);

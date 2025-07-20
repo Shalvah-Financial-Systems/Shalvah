@@ -26,24 +26,14 @@ export function middleware(request: NextRequest) {
   const refreshToken = request.cookies.get('refresh_token');
   const hasAuthTokens = accessToken || refreshToken;
   
-  console.log('Middleware executando:', {
-    pathname,
-    isProtectedRoute,
-    hasAuthTokens: !!hasAuthTokens,
-    accessToken: !!accessToken,
-    refreshToken: !!refreshToken,
-  });
-  
   // Se está tentando acessar rota protegida sem autenticação
   if (isProtectedRoute && !hasAuthTokens) {
-    console.log('Redirecionando para login - sem tokens');
     const loginUrl = new URL('/login', request.url);
     return NextResponse.redirect(loginUrl);
   }
   
   // Se está autenticado e tentando acessar página de login, redirecionar para dashboard
   if (hasAuthTokens && pathname === '/login') {
-    console.log('Redirecionando para dashboard - já autenticado');
     const dashboardUrl = new URL('/dashboard', request.url);
     return NextResponse.redirect(dashboardUrl);
   }

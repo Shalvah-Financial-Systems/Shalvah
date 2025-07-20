@@ -155,15 +155,10 @@ export default function LoginPage() {
   };
 
   const onSubmit = async (data: LoginFormData) => {
-    console.log('=== PÁGINA DE LOGIN - onSubmit chamado ===');
-    console.log('Estado isLoading da página:', isLoading);
-    
     if (isLoading) {
-      console.log('Página: Login já em andamento');
       return;
     }
     
-    console.log('Definindo isLoading da página como true');
     setIsLoading(true);
     
     try {
@@ -172,36 +167,17 @@ export default function LoginPage() {
         identifier: identifierValue
       };
       
-      console.log('=== INICIANDO LOGIN ===');
-      console.log('Cookies antes do login:', document.cookie);
-      console.log('Dados a serem enviados:', { ...submitData, password: '[HIDDEN]' });
-      
       const result = await login(submitData) as LoginResult;
       
-      console.log('=== RESULTADO DO LOGIN ===');
-      console.log('Success:', result.success);
-      console.log('User:', result.user);
-      console.log('RedirectTo:', result.redirectTo);
-      console.log('Cookies após login:', document.cookie);
-      
       if (result.success && result.redirectTo) {
-        console.log('Login bem-sucedido, redirecionando em 2 segundos...');
-        
-        // Aguardar tempo suficiente para os cookies serem definidos
+        // Redirecionar após login bem-sucedido
         setTimeout(() => {
-          console.log('Cookies antes do redirecionamento:', document.cookie);
-          console.log('Executando redirecionamento para:', result.redirectTo);
-          
-          // Usar replace para evitar voltar à página de login
-          // // window.location.replace(result.redirectTo!);
-        }, 2000);
-      } else {
-        console.log('Login falhou ou sem redirectTo');
+          window.location.replace(result.redirectTo!);
+        }, 1000);
       }
     } catch (error) {
-      console.error('Erro na página de login:', error);
+      // Erro será tratado pelo hook useAuth
     } finally {
-      console.log('Definindo isLoading da página como false');
       setIsLoading(false);
     }
   };

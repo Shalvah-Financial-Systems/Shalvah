@@ -26,11 +26,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // useEffect para inicialização
   useEffect(() => {
     const initializeAuth = async () => {
-      console.log('Inicializando autenticação...');
-      
       // Se estamos na página de login, não verificar autenticação
       if (typeof window !== 'undefined' && window.location.pathname === '/login') {
-        console.log('Na página de login, pulando verificação inicial');
         setInitialized(true);
         return;
       }
@@ -39,10 +36,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const response = await api.get('/auth/profile');
         if (response.data) {
           setUser(response.data);
-          console.log('Usuário autenticado encontrado:', response.data);
         }
       } catch (error) {
-        console.log('Nenhum usuário autenticado encontrado');
+        // Usuário não autenticado
       } finally {
         setInitialized(true);
       }
@@ -65,43 +61,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = async (credentials: LoginCredentials): Promise<{ success: boolean; user?: User; redirectTo?: string }> => {
-    console.log('=== LOGIN HOOK CHAMADO ===');
-    console.log('Estado atual do loading:', loading);
-    
     if (loading) {
-      console.log('Login já em andamento, ignorando chamada duplicada');
       return { success: false };
     }
     
-    console.log('Definindo loading como true');
     setLoading(true);
     
     try {
-      console.log('Fazendo requisição para:', credentials.identifier);
-      
       const response = await api.post<AuthResponse>('/auth/login', credentials);
-      console.log('Resposta do login:', response.data);
-      console.log('Resposta recebida:', {
-        status: response.status,
-        hasUser: !!response.data.user,
-        userType: response.data.user?.type,
-      });
       
       // Aguardar um pouco para os cookies serem definidos pelo navegador
       await new Promise(resolve => setTimeout(resolve, 500));
-      
-      console.log('Cookies após login:', {
-        allCookies: document.cookie,
-        hasAccessToken: document.cookie.includes('access_token'),
-        hasRefreshToken: document.cookie.includes('refresh_token'),
-      });
       
       setUser(response.data.user);
       toast.success('Login realizado com sucesso!');
       
       const redirectPath = response.data.user?.type === 'ADMIN' ? '/admin/dashboard' : '/dashboard';
-      
-      console.log('Redirecionamento definido para:', redirectPath);
       
       return { 
         success: true, 
@@ -109,12 +84,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         redirectTo: redirectPath
       };
     } catch (error: unknown) {
-      console.error('Erro no login:', error);
       const message = error instanceof Error ? error.message : 'Erro ao fazer login';
       toast.error(message);
       return { success: false };
     } finally {
-      console.log('Definindo loading como false');
       setLoading(false);
     }
   };  const logout = async () => {
@@ -122,7 +95,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await api.post('/auth/logout');
     } catch (error) {
-      console.error('Erro ao fazer logout:', error);
+      // Erro silencioso no logout
     } finally {
       setUser(null);
       setLoading(false);
@@ -155,7 +128,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(response.data);
       }
     } catch (error) {
-      console.log('Erro ao verificar autenticação:', error);
       // Não limpar usuário automaticamente, deixar o interceptor lidar com isso
     }
   }, [user?.id, loading]);
