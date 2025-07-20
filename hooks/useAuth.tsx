@@ -80,7 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('Fazendo requisição para:', credentials.identifier);
       
       const response = await api.post<AuthResponse>('/auth/login', credentials);
-      
+      console.log('Resposta do login:', response.data);
       console.log('Resposta recebida:', {
         status: response.status,
         hasUser: !!response.data.user,

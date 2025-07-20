@@ -193,7 +193,7 @@ export default function LoginPage() {
           console.log('Executando redirecionamento para:', result.redirectTo);
           
           // Usar replace para evitar voltar à página de login
-          window.location.replace(result.redirectTo!);
+          // // window.location.replace(result.redirectTo!);
         }, 2000);
       } else {
         console.log('Login falhou ou sem redirectTo');
