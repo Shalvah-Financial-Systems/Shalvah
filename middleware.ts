@@ -36,6 +36,14 @@ export function middleware(request: NextRequest) {
       allCookies: request.cookies.getAll()
     });
   }
+  //   console.log('Middleware - Rota:', pathname);
+  //   console.log('Middleware - Cookies encontrados:', {
+  //     accessToken: !!accessToken,
+  //     refreshToken: !!refreshToken,
+  //     hasAuthTokens,
+  //     allCookies: request.cookies.getAll()
+  //   });
+  // }
   
   // Se está tentando acessar rota protegida sem autenticação
   if (isProtectedRoute && !hasAuthTokens) {
