@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { getUserTypeFromToken } from './lib/server-utils';
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  
+
   // Rotas que requerem autenticação
   const protectedRoutes = [
     '/dashboard',
@@ -21,43 +22,23 @@ export function middleware(request: NextRequest) {
     pathname.startsWith(route)
   );
   
-  // Verificar se tem tokens de autenticação
   const accessToken = request.cookies.get('access_token');
-  const refreshToken = request.cookies.get('refresh_token');
-  const hasAuthTokens = accessToken || refreshToken;
-  
-  // Debug temporário para verificar cookies
-  if (pathname === '/dashboard' || pathname.startsWith('/admin')) {
-    console.log('Middleware - Rota:', pathname);
-    console.log('Middleware - Cookies encontrados:', {
-      accessToken: !!accessToken,
-      refreshToken: !!refreshToken,
-      hasAuthTokens,
-      allCookies: request.cookies.getAll()
-    });
-  }
-  //   console.log('Middleware - Rota:', pathname);
-  //   console.log('Middleware - Cookies encontrados:', {
-  //     accessToken: !!accessToken,
-  //     refreshToken: !!refreshToken,
-  //     hasAuthTokens,
-  //     allCookies: request.cookies.getAll()
-  //   });
-  // }
-  
-  // Se está tentando acessar rota protegida sem autenticação
-  if (isProtectedRoute && !hasAuthTokens) {
-    const loginUrl = new URL('/login', request.url);
-    return NextResponse.redirect(loginUrl);
+  if (isProtectedRoute && !accessToken) {
+    return NextResponse.redirect(`${request.nextUrl.origin}/login`);
   }
   
-  // Se está autenticado e tentando acessar página de login, redirecionar para dashboard
-  if (hasAuthTokens && pathname === '/login') {
-    const dashboardUrl = new URL('/dashboard', request.url);
-    return NextResponse.redirect(dashboardUrl);
+  // Impedir usuário autenticado de acessar login/cadastro
+  if ((pathname === '/login' || pathname === '/cadastro') && accessToken) {
+    // Buscar tipo do usuário para redirecionar corretamente
+    const userType = await getUserTypeFromToken(request);
+    if (userType === 'ADMIN') {
+      return NextResponse.redirect(`${request.nextUrl.origin}/admin/dashboard`);
+    } else {
+      return NextResponse.redirect(`${request.nextUrl.origin}/dashboard`);
+    }
   }
-  
   return NextResponse.next();
+
 }
 
 export const config = {

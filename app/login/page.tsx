@@ -172,11 +172,6 @@ export default function LoginPage() {
       if (result.success && result.redirectTo) {
         // Aguardar mais tempo e verificar se os cookies foram definidos
         setTimeout(() => {
-          // Verificar se os cookies foram definidos
-          const cookies = document.cookie;
-          console.log('Cookies após login:', cookies);
-          
-          // Tentar usar router.push em vez de window.location.replace
           router.push(result.redirectTo!);
         }, 2000); // Aumentar para 2 segundos
       }

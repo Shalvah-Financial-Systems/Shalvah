@@ -79,7 +79,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       const redirectPath = response.data.user?.type === 'ADMIN' ? '/admin/dashboard' : '/dashboard';
-      
       return { 
         success: true, 
         user: response.data.user,
@@ -112,27 +111,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const revalidateUser = useCallback(async () => {
     await fetchUserProfile();
-  }, [fetchUserProfile]);  // Função para verificar autenticação - modificada para não interferir com login
-  const checkAuthStatus = useCallback(async () => {
-    // Não verificar status se acabamos de fazer login
-    if (loading) {
-      return;
-    }
-    
-    // Se estamos na página de login, não fazer verificação automática
-    if (typeof window !== 'undefined' && window.location.pathname === '/login') {
-      return;
-    }
-    
-    try {
-      const response = await api.get('/auth/profile');
-      if (response.data && response.data.id !== user?.id) {
-        setUser(response.data);
-      }
-    } catch (error) {
-      // Não limpar usuário automaticamente, deixar o interceptor lidar com isso
-    }
-  }, [user?.id, loading]);
+  }, [fetchUserProfile]);
 
   return (
     <AuthContext.Provider value={{ user, login, logout, clearAuth, revalidateUser, loading }}>

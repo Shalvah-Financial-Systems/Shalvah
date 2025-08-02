@@ -14,23 +14,19 @@ export function EnterpriseLayout({ children }: EnterpriseLayoutProps) {
   const router = useRouter()
 
   const isEnterprise = user?.type === 'ENTERPRISE'
+  const isAdmin = user?.type === 'ADMIN'
 
   useEffect(() => {
     if (!loading) {
       if (!user) {
         // Se não há usuário (logout), redirecionar imediatamente para login
         router.push('/login')
-      } else if (!isEnterprise) {
-        // Se for ADMIN, redirecionar para dashboard administrativo
-        if (user?.type === 'ADMIN') {
-          router.push('/admin/dashboard')
-        } else {
-          // Se não for enterprise nem admin, redirecionar para login
-          router.push('/login')
-        }
+      } else if (!isEnterprise && !isAdmin) {
+        // Se não for enterprise nem admin, redirecionar para login
+        router.push('/login')
       }
     }
-  }, [isEnterprise, loading, router, user])
+  }, [isEnterprise, isAdmin, loading, router, user])
 
   if (loading || !user) {
     return (
@@ -42,7 +38,7 @@ export function EnterpriseLayout({ children }: EnterpriseLayoutProps) {
     )
   }
 
-  if (!isEnterprise) {
+  if (!isEnterprise && !isAdmin) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">

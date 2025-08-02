@@ -68,10 +68,13 @@ export function Sidebar({ children }: SidebarProps) {
         // Para ENTERPRISE, verificar se há informações do plano
         const planName = (user as any).plan?.name;
         setUserLabel(planName || 'Sem Plano');
-      } else {
-        // Para outros tipos, capitalizar apenas a primeira letra
+      } else if (user.type) {
+        // Para outros tipos, capitalizar apenas a primeira letra (verificar se type existe)
         const formattedType = user.type.charAt(0).toUpperCase() + user.type.slice(1).toLowerCase();
         setUserLabel(formattedType);
+      } else {
+        // Se não há type definido
+        setUserLabel('Usuário');
       }
     } else {
       // Se não há usuário, resetar os estados
@@ -223,14 +226,24 @@ export function Sidebar({ children }: SidebarProps) {
   ], [pathname]);
 
   const filteredMenuItems = useMemo(() => {
-    return menuItems.filter(item => {
-      // Se não há user logado, não mostrar nenhum menu
-      if (!userType) return false;
-      
-      // Filtrar baseado no tipo de usuário
-      return item.userType === userType;
-    });
-  }, [menuItems, userType]);
+    // Se está no admin dashboard, mostrar todos os menus para admin
+    if (pathname.startsWith('/admin/')) {
+      return menuItems.filter(item => item.userType === 'ADMIN');
+    }
+    
+    // Se está em rota enterprise e é admin, mostrar menus enterprise
+    if (userType === 'ADMIN') {
+      return menuItems.filter(item => item.userType === 'ENTERPRISE');
+    }
+    
+    // Se está em rota enterprise e é enterprise, mostrar menus enterprise  
+    if (userType === 'ENTERPRISE') {
+      return menuItems.filter(item => item.userType === 'ENTERPRISE');
+    }
+    
+    // Fallback: se não há user logado ainda, mostrar todos os menus
+    return menuItems;
+  }, [menuItems, userType, pathname]);
 
   const sidebarVariants = {
     expanded: { width: '16rem' },
