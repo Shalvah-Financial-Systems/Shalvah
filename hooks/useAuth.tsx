@@ -23,10 +23,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [initialized, setInitialized] = useState(false);
   const router = useRouter();
 
-  // useEffect para inicialização
   useEffect(() => {
     const initializeAuth = async () => {
-      // Se estamos na página de login, não verificar autenticação
       if (typeof window !== 'undefined' && window.location.pathname === '/login') {
         setInitialized(true);
         return;
@@ -38,7 +36,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(response.data);
         }
       } catch (error) {
-        // Usuário não autenticado
       } finally {
         setInitialized(true);
       }
@@ -69,14 +66,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     try {
       const response = await api.post<AuthResponse>('/auth/login', credentials);
-      
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
+            
       setUser(response.data.user);
       toast.success('Login realizado com sucesso!');
-      
-      // Aguardar um pouco mais para garantir que os cookies sejam definidos
-      await new Promise(resolve => setTimeout(resolve, 1000));
       
       const redirectPath = response.data.user?.type === 'ADMIN' ? '/admin/dashboard' : '/dashboard';
       return { 

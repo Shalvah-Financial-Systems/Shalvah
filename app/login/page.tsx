@@ -173,7 +173,7 @@ export default function LoginPage() {
         // Aguardar mais tempo e verificar se os cookies foram definidos
         setTimeout(() => {
           router.push(result.redirectTo!);
-        }, 2000); // Aumentar para 2 segundos
+        }, 1000); 
       }
     } catch (error) {
       // Erro será tratado pelo hook useAuth
