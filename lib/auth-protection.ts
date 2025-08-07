@@ -20,7 +20,7 @@ export async function withAuthProtection(): Promise<AuthProtectionResult> {
     });
     
     const user = response.data.user || response.data;
-    
+    console.log('User profile:', user);
     if (!user) {
       redirect('/login');
     }
