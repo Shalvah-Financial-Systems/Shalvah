@@ -17,13 +17,13 @@ export default async function AdminDashboard() {
     });
     user = response.data.user || response.data;
   } catch {
-    // Não autenticado
+    console.log('Usuário não autenticado - redirecionando para login');
   }
-  if (!user || user.type !== 'ADMIN') {
+  if (!user || user.type != 'ADMIN') {
+    console.log('Usuário não é admin - redirecionando para login')
     redirect('/login');
   }
 
-  // SSR: buscar stats admin - usar dados mock temporariamente
   let stats = null;
   let error = null;
   try {

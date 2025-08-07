@@ -4,28 +4,7 @@ import DashboardContent from '@/components/DashboardContent';
 import { EnterpriseLayout } from '@/components/EnterpriseLayout';
 
 export default async function DashboardPage() {
-  // // SSR: buscar perfil do usuário
-  // const cookieStore = await cookies();
-  // const cookieHeader = cookieStore.toString();
-  // let user = null;
-  // try {
-  //   const response = await api.get('/auth/profile', {
-  //     headers: { Cookie: cookieHeader },
-  //     withCredentials: true,
-  //   });
-  //   user = response.data.user || response.data;
-  // } catch {
-  //   // Não autenticado
-  // }
-  // if (!user) {
-  //   redirect('/login');
-  // }
-  // // Remover redirecionamento do admin - permitir que admin acesse dashboard enterprise
-  // // if (user.type === 'ADMIN') {
-  // //   redirect('/admin/dashboard');
-  // // }
-
-  // SSR: buscar dados do dashboard
+  
   let dashboardData = {
     balance: 0,
     income: 0,

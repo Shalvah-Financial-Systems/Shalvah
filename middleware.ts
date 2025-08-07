@@ -24,6 +24,8 @@ export async function middleware(request: NextRequest) {
   
   const accessToken = request.cookies.get('access_token');
 
+  console.log('Access Token:', accessToken);
+
   if (isProtectedRoute && !accessToken) {
     return NextResponse.redirect(`${request.nextUrl.origin}/login`);
   }
@@ -31,8 +33,10 @@ export async function middleware(request: NextRequest) {
   if ((pathname === '/login' || pathname === '/cadastro') && accessToken) {
     const userType = await getUserTypeFromToken(request);
     if (userType === 'ADMIN') {
+      console.log('Redirecting to admin dashboard');
       return NextResponse.redirect(`${request.nextUrl.origin}/admin/dashboard`);
     } else {
+      console.log('Redirecting to user dashboard');
       return NextResponse.redirect(`${request.nextUrl.origin}/dashboard`);
     }
   }
