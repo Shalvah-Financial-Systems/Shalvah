@@ -1,9 +1,17 @@
 
+import { cookies } from 'next/headers';
 import api from '@/lib/api';
 import DashboardContent from '@/components/DashboardContent';
 import { EnterpriseLayout } from '@/components/EnterpriseLayout';
+import { withEnterpriseProtection } from '@/lib/auth-protection';
 
 export default async function DashboardPage() {
+  // Proteção SSR - verificar autenticação e autorização
+  const { user } = await withEnterpriseProtection();
+  
+  // SSR: buscar dados do dashboard usando cookies para autenticação
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore.toString();
   
   let dashboardData = {
     balance: 0,
@@ -14,6 +22,7 @@ export default async function DashboardPage() {
   let error = null;
   try {
     const response = await api.get('/transactions/dashboard', {
+      headers: { Cookie: cookieHeader },
       withCredentials: true,
     });
     const data = response.data.data || response.data;

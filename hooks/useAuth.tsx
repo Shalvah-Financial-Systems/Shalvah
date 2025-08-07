@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 
 interface AuthContextType {
   user: User | null;
-  login: (credentials: LoginCredentials) => Promise<{ success: boolean; user?: User }>;
+  login: (credentials: LoginCredentials) => Promise<{ success: boolean; user?: User; redirectTo?: string }>;
   logout: () => void;
   clearAuth: () => void;
   revalidateUser: () => Promise<void>;
@@ -65,12 +65,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(true);
     
     try {
-      const response = await api.post<AuthResponse>('/auth/login', credentials);
+      const response = await api.post<AuthResponse>('/auth/login', credentials, {
+        withCredentials: true
+      });
             
       setUser(response.data.user);
       toast.success('Login realizado com sucesso!');
       
+      // Redirecionamento client-side baseado no tipo de usuário
       const redirectPath = response.data.user?.type === 'ADMIN' ? '/admin/dashboard' : '/dashboard';
+      
+      // Aguardar um pouco para garantir que os cookies sejam definidos
+      setTimeout(() => {
+        window.location.href = redirectPath;
+      }, 100);
+      
       return { 
         success: true, 
         user: response.data.user,
@@ -86,14 +95,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };  const logout = async () => {
     setLoading(true);
     try {
-      await api.post('/auth/logout');
+      await api.post('/auth/logout', {}, {
+        withCredentials: true
+      });
     } catch (error) {
       // Erro silencioso no logout
     } finally {
       setUser(null);
       setLoading(false);
       // Redirecionar explicitamente para /login após logout
-      router.push('/login');
+      window.location.href = '/login';
     }
   };
   

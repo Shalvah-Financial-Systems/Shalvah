@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { getUserTypeFromToken } from './lib/server-utils';
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -23,26 +22,18 @@ export async function middleware(request: NextRequest) {
   );
   
   const accessToken = request.cookies.get('access_token');
+  const hasValidToken = accessToken && 
+    accessToken.value && 
+    accessToken.value.trim() !== '' && 
+    accessToken.value !== 'undefined' && 
+    accessToken.value !== 'null';
 
-  console.log('Access Token:', accessToken);
-
-  if (isProtectedRoute && !accessToken) {
-    return NextResponse.redirect(`${request.nextUrl.origin}/login`);
-  }
-  
-  if ((pathname === '/login' || pathname === '/cadastro') && accessToken) {
-    const userType = await getUserTypeFromToken(request);
-    if (userType === 'ADMIN') {
-      console.log('Redirecting to admin dashboard');
-      return NextResponse.redirect(`${request.nextUrl.origin}/admin/dashboard`);
-    } else {
-      console.log('Redirecting to user dashboard');
-      return NextResponse.redirect(`${request.nextUrl.origin}/dashboard`);
-    }
+  // Se rota protegida e sem token, redirecionar para login
+  if (isProtectedRoute && !hasValidToken) {
+    return NextResponse.redirect(new URL('/login', request.url));
   }
   
   return NextResponse.next();
-
 }
 
 export const config = {

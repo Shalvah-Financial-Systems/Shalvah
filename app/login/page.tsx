@@ -169,12 +169,8 @@ export default function LoginPage() {
       
       const result = await login(submitData) as LoginResult;
       
-      if (result.success && result.redirectTo) {
-        // Aguardar mais tempo e verificar se os cookies foram definidos
-        setTimeout(() => {
-          router.push(result.redirectTo!);
-        }, 1000); 
-      }
+      // O redirecionamento já é feito automaticamente pelo hook useAuth
+      // Não precisa fazer nada aqui se o login for bem-sucedido
     } catch (error) {
       // Erro será tratado pelo hook useAuth
     } finally {
