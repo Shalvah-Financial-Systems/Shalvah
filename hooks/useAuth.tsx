@@ -73,7 +73,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       toast.success('Login realizado com sucesso!');
       
       // Redirecionamento client-side baseado no tipo de usuário
-      const redirectPath = response.data.user?.type === 'ADMIN' ? '/admin/dashboard' : '/dashboard';
+      const redirectPath = response.data.user?.type == 'ADMIN' ? '/admin/dashboard' : '/dashboard';
       
       // Aguardar um pouco para garantir que os cookies sejam definidos
       setTimeout(() => {
