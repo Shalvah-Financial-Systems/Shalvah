@@ -2,15 +2,15 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Button } from 'components/ui/button'
+import { Button } from '../../../components/ui/button'
 import { Plus } from 'lucide-react'
 import { usePermissions } from '@/hooks/usePermissions'
 import { useAlertModal } from '@/hooks/useAlertModal'
 import { Permission } from '@/types'
-import { AlertModal } from 'components/AlertModal'
-import { PermissionModal } from 'components/PermissionModal'
-import { PermissionsTable } from 'components/PermissionsTable'
-import { PermissionViewModal } from 'components/PermissionViewModal'
+import { AlertModal } from '../../../components/AlertModal'
+import { PermissionModal } from '../../../components/PermissionModal'
+import { PermissionsTable } from '../../../components/PermissionsTable'
+import { PermissionViewModal } from '../../../components/PermissionViewModal'
 
 export default function PermissionsPage() {
   const { permissions, loadPermissions, loading } = usePermissions()
