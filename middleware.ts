@@ -1,8 +1,12 @@
+import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  const cookieStore = await cookies();
+  
 
   // Rotas que requerem autenticação
   const protectedRoutes = [
@@ -20,8 +24,13 @@ export async function middleware(request: NextRequest) {
   const isProtectedRoute = protectedRoutes.some(route => 
     pathname.startsWith(route)
   );
-  
-  const accessToken = request.cookies.get('access_token');
+
+  console.log("cookieStore middleware: ", cookieStore.getAll());
+
+  const accessToken = cookieStore.get('access_token');
+
+  console.log(accessToken)
+
   const hasValidToken = accessToken && 
     accessToken.value && 
     accessToken.value.trim() !== '' && 
