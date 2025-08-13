@@ -12,7 +12,9 @@ export default async function DashboardPage() {
   // SSR: buscar dados do dashboard usando cookies para autenticação
   const cookieStore = await cookies();
   const cookieHeader = cookieStore.toString();
-  
+
+  console.log(cookieStore.getAll());
+
   let dashboardData = {
     balance: 0,
     income: 0,

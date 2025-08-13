@@ -60,6 +60,8 @@ export async function withEnterpriseProtection(): Promise<AuthProtectionResult> 
 export async function checkAuth(): Promise<AuthProtectionResult | null> {
   const cookieStore = await cookies();
   const cookieHeader = cookieStore.toString();
+
+  console.log('cookieStore:', cookieStore.getAll());
   
   try {
     const response = await api.get('/auth/profile', {
