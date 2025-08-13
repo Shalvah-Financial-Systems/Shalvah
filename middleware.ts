@@ -30,6 +30,7 @@ export async function middleware(request: NextRequest) {
 
   // Se rota protegida e sem token, redirecionar para login
   if (isProtectedRoute && !hasValidToken) {
+    console.log("caiu aqui no middleware")
     return NextResponse.redirect(new URL('/login', request.url));
   }
   
